@@ -200,6 +200,70 @@ textarea:focus{outline:none;border-color:var(--accent);}
 /* —— METRIC BADGE —— */
 .mbadge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:rgba(108,99,255,.2);color:var(--accent);}
 
+/* —— HIGH ROAS EVENT PANEL —— */
+.highlight-panel{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px;margin-bottom:14px;
+}
+.highlight-panel h3{font-size:13px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+.highlight-list{display:flex;flex-direction:column;gap:8px;}
+.highlight-item{
+  display:flex;align-items:flex-start;gap:12px;
+  background:var(--surface);border:1px solid var(--border);
+  border-left:3px solid var(--a4);border-radius:8px;padding:12px 14px;
+}
+.highlight-item.editable:hover{border-color:var(--accent);cursor:pointer;}
+.hi-date{min-width:56px;font-size:11px;color:var(--muted);margin-top:2px;font-weight:600;}
+.hi-roas{
+  min-width:60px;font-size:16px;font-weight:700;color:var(--a4);
+  display:flex;flex-direction:column;align-items:center;line-height:1;
+}
+.hi-roas small{font-size:9px;color:var(--muted);font-weight:400;margin-top:2px;}
+.hi-body{flex:1;}
+.hi-title{font-size:12px;font-weight:600;margin-bottom:3px;color:var(--text);}
+.hi-desc{font-size:11.5px;color:var(--muted);line-height:1.5;}
+.hi-edit-btn{
+  background:none;border:1px solid var(--border);border-radius:6px;
+  color:var(--muted);font-size:11px;padding:3px 8px;cursor:pointer;
+  font-family:inherit;white-space:nowrap;align-self:flex-start;
+  transition:all .15s;
+}
+.hi-edit-btn:hover{border-color:var(--accent);color:var(--accent);}
+.hi-empty{font-size:12px;color:var(--muted);text-align:center;padding:12px 0;}
+
+/* 이벤트 편집 모달 */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;
+  display:flex;align-items:center;justify-content:center;
+}
+.modal-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  padding:28px;width:100%;max-width:480px;
+  box-shadow:0 16px 48px rgba(0,0,0,.5);
+}
+.modal-box h3{font-size:14px;font-weight:700;margin-bottom:18px;}
+.modal-field{margin-bottom:14px;}
+.modal-field label{display:block;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.modal-field input,.modal-field textarea{
+  width:100%;padding:8px 12px;background:var(--card);
+  border:1px solid var(--border);border-radius:7px;
+  color:var(--text);font-size:13px;font-family:inherit;
+}
+.modal-field textarea{height:80px;resize:vertical;line-height:1.5;}
+.modal-field input:focus,.modal-field textarea:focus{outline:none;border-color:var(--accent);}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+
+/* 차트 위 별표 뱃지 */
+.chart-star-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;min-height:24px;}
+.chart-star{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(255,217,61,.12);border:1px solid rgba(255,217,61,.35);
+  border-radius:20px;padding:3px 10px;font-size:11px;color:var(--a4);
+  cursor:pointer;transition:all .15s;
+}
+.chart-star:hover{background:rgba(255,217,61,.22);}
+.chart-star .star-icon{font-size:12px;}
+
 /* —— FOOTER —— */
 .footer{text-align:center;color:var(--muted);font-size:11px;padding:20px;border-top:1px solid var(--border);margin-top:8px;}
 </style>
@@ -414,8 +478,43 @@ textarea:focus{outline:none;border-color:var(--accent);}
     <div class="chart-card">
       <div class="chart-card-hdr">
         <h3>일/주차별 성과 <small id="trendSubtitle">전체 기간</small></h3>
+        <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openEventModal(null)">+ 이슈 등록</button>
       </div>
+      <!-- ROAS 350%+ 날짜 뱃지 -->
+      <div class="chart-star-row" id="starBadgeRow"></div>
       <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ROAS 350%+ 성과 하이라이트 -->
+  <div class="sec-title" id="highlightSection" style="display:none;">⭐ ROAS 350%+ 성과 이슈</div>
+  <div class="highlight-panel" id="highlightPanel" style="display:none;">
+    <h3>🏆 고성과 이슈 <span class="mbadge" id="highlightCount">0건</span></h3>
+    <div class="highlight-list" id="highlightList"></div>
+  </div>
+
+  <!-- 이벤트 편집 모달 -->
+  <div class="modal-overlay" id="eventModal" style="display:none;" onclick="if(event.target===this)closeEventModal()">
+    <div class="modal-box">
+      <h3 id="modalTitle">이슈 등록 / 수정</h3>
+      <input type="hidden" id="modalDate"/>
+      <div class="modal-field">
+        <label>날짜</label>
+        <input type="date" id="modalDateInput"/>
+      </div>
+      <div class="modal-field">
+        <label>이슈 제목</label>
+        <input type="text" id="modalEventTitle" placeholder="예: 시즌 프로모션 50% 할인 라이브"/>
+      </div>
+      <div class="modal-field">
+        <label>상세 내용</label>
+        <textarea id="modalEventDesc" placeholder="예: 미미미닭 50% 할인 쿠폰 발급 + 인플루언서 콜라보 게시물 업로드. 유입 대비 전환율 급등."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="modalDeleteBtn" onclick="deleteEvent()" style="display:none;">삭제</button>
+        <button class="btn" onclick="closeEventModal()">취소</button>
+        <button class="btn btn-primary" onclick="saveEvent()">저장</button>
+      </div>
     </div>
   </div>
 
@@ -517,6 +616,20 @@ const MEDIA_WEEK = [
   {media:'Google',spend:2595953,imp:455570,clicks:7570,ctr:1.66,cpc:343,purchase:117,purchaseCvr:1.55,purchaseCpa:22188,revenue:11411653,roas:440,share:10,color:'#ea4335'},
   {media:'Kakao',spend:635847,imp:529034,clicks:1629,ctr:0.31,cpc:390,purchase:12,purchaseCvr:0.74,purchaseCpa:52987,revenue:758027,roas:119,share:2,color:'#c8a800'},
 ];
+
+// —— HIGH ROAS EVENTS ——
+const HIGH_ROAS_THRESHOLD = 350;
+
+let roasEvents = {
+  '2026-03-22': {
+    title: '시즌 할인 프로모션 + 릴스 바이럴',
+    desc: '여기서만 50% 할인 쿠폰 + 미미미닭 릴스 콘텐츠 동시 라이브. CTR 1.09%, 구매 348건으로 전일 대비 4배 급증. Meta 단일일 최고 ROAS 달성.'
+  },
+  '2026-03-25': {
+    title: '재구매 타겟 리마케팅 집중 집행',
+    desc: '기존 구매자 대상 리타겟팅 캠페인 예산 집중 (일예산 +40%). 구매CVR 6.04%, 구매 223건. CPC 786원으로 효율적 유입 달성.'
+  }
+};
 
 // —— STATE ——
 let allData = [...DEFAULT_DATA];
@@ -701,30 +814,110 @@ function updateTrendChart(data){
   }
   document.getElementById('dailyBadge').textContent=data.length+'일';
 
+  // ROAS 350%+ 날짜 인덱스 (일별 뷰만)
+  const highRoasDates = currentView==='daily'
+    ? data.map((d,i)=>d.roas>=HIGH_ROAS_THRESHOLD?i:-1).filter(i=>i>=1)
+    : [];
+
+  // 포인트 색상 — 350%+ 날은 금색 별 강조
+  const pointColors = currentView==='daily'
+    ? data.map(d => d.roas>=HIGH_ROAS_THRESHOLD ? '#ffd93d' : '#6c63ff')
+    : labels.map(()=>'#6c63ff');
+  const pointRadii = currentView==='daily'
+    ? data.map(d => d.roas>=HIGH_ROAS_THRESHOLD ? 7 : (data.length>60?0:3))
+    : labels.map(()=>3);
+
   if(trendChart) trendChart.destroy();
+
+  // 커스텀 afterDraw 플러그인 — 350%+ 날 수직선 + 라벨
+  const annotationPlugin = {
+    id:'highRoasAnnotation',
+    afterDraw(chart){
+      if(currentView!=='daily') return;
+      const ctx2=chart.ctx;
+      const xScale=chart.scales.x;
+      const yScale=chart.scales.y2||chart.scales.y;
+      const chartArea=chart.chartArea;
+      data.forEach((d,i)=>{
+        if(d.roas < HIGH_ROAS_THRESHOLD) return;
+        const x=xScale.getPixelForValue(i);
+        const ev=roasEvents[d.date];
+        // 수직 점선
+        ctx2.save();
+        ctx2.setLineDash([4,4]);
+        ctx2.strokeStyle='rgba(255,217,61,0.4)';
+        ctx2.lineWidth=1.5;
+        ctx2.beginPath();
+        ctx2.moveTo(x,chartArea.top);
+        ctx2.lineTo(x,chartArea.bottom);
+        ctx2.stroke();
+        ctx2.restore();
+        // 상단 별 + ROAS 텍스트
+        ctx2.save();
+        ctx2.fillStyle='#ffd93d';
+        ctx2.font='bold 11px Segoe UI';
+        ctx2.textAlign='center';
+        ctx2.fillText('★ '+d.roas+'%', x, chartArea.top-6);
+        // 이슈 제목 있으면 표시
+        if(ev){
+          ctx2.fillStyle='rgba(255,217,61,0.8)';
+          ctx2.font='10px Segoe UI';
+          const shortTitle=ev.title.length>14?ev.title.slice(0,14)+'…':ev.title;
+          ctx2.fillText(shortTitle, x, chartArea.top+14);
+        }
+        ctx2.restore();
+      });
+    }
+  };
+
   trendChart=new Chart(document.getElementById('trendChart'),{
     type:'bar',
+    plugins:[annotationPlugin],
     data:{
       labels,
       datasets:[
         {
           type:'line',label:metricLabels[metric],data:values,
           borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.12)',
-          tension:.4,pointRadius:data.length>60?0:3,fill:true,yAxisID:'y2',order:1,borderWidth:2,
+          tension:.4,
+          pointRadius:pointRadii,
+          pointBackgroundColor:pointColors,
+          pointBorderColor:pointColors,
+          pointBorderWidth:2,
+          fill:true,yAxisID:'y2',order:1,borderWidth:2,
         },
         {
           type:'bar',label:'광고비 (만원)',data:spend2,
-          backgroundColor:'rgba(0,212,170,.3)',borderRadius:3,yAxisID:'y',order:2,
+          backgroundColor: currentView==='daily'
+            ? data.map(d=>d.roas>=HIGH_ROAS_THRESHOLD?'rgba(255,217,61,.35)':'rgba(0,212,170,.3)')
+            : labels.map(()=>'rgba(0,212,170,.3)'),
+          borderRadius:3,yAxisID:'y',order:2,
         }
       ]
     },
     options:{
       responsive:true,maintainAspectRatio:false,
+      layout:{padding:{top:28}},
       interaction:{mode:'index',intersect:false},
       plugins:{
         legend:{labels:{color:'#8a8fa8',boxWidth:12,padding:12}},
         tooltip:{callbacks:{
-          label:ctx=>ctx.dataset.label.includes('만원')?` 광고비 ${ctx.raw}만원`:` ${metricLabels[metric]} ${isPercent?Number(ctx.raw).toFixed(2)+'%':Number(ctx.raw).toLocaleString()}`
+          title: ctx=>{
+            const label=ctx[0].label;
+            if(currentView==='daily'){
+              const fullDate = data[ctx[0].dataIndex]?.date;
+              const ev=fullDate&&roasEvents[fullDate];
+              if(ev) return label+' ⭐ '+ev.title;
+            }
+            return label;
+          },
+          label:ctx=>ctx.dataset.label.includes('만원')?` 광고비 ${ctx.raw}만원`:` ${metricLabels[metric]} ${isPercent?Number(ctx.raw).toFixed(2)+'%':Number(ctx.raw).toLocaleString()}`,
+          afterBody: ctx=>{
+            if(currentView!=='daily') return;
+            const fullDate=data[ctx[0].dataIndex]?.date;
+            const ev=fullDate&&roasEvents[fullDate];
+            if(ev) return ['','📌 '+ev.desc.slice(0,60)+(ev.desc.length>60?'…':'')];
+          }
         }}
       },
       scales:{
@@ -734,6 +927,100 @@ function updateTrendChart(data){
       }
     }
   });
+
+  // 별 뱃지 + 하이라이트 패널 업데이트
+  renderStarBadges(data);
+  renderHighlightPanel(data);
+}
+
+// —— STAR BADGES (차트 위) ——
+function renderStarBadges(data){
+  const row=document.getElementById('starBadgeRow');
+  row.innerHTML='';
+  if(currentView!=='daily') return;
+  data.filter(d=>d.roas>=HIGH_ROAS_THRESHOLD).forEach(d=>{
+    const ev=roasEvents[d.date];
+    const badge=document.createElement('div');
+    badge.className='chart-star';
+    badge.innerHTML=`<span class="star-icon">⭐</span>${d.date.slice(5)} ROAS ${d.roas}%${ev?' · '+ev.title.slice(0,16)+(ev.title.length>16?'…':''):''}`;
+    badge.onclick=()=>openEventModal(d.date);
+    row.appendChild(badge);
+  });
+}
+
+// —— HIGHLIGHT PANEL ——
+function renderHighlightPanel(data){
+  const highDays = data.filter(d=>d.roas>=HIGH_ROAS_THRESHOLD)
+    .sort((a,b)=>b.roas-a.roas);
+  const panel=document.getElementById('highlightPanel');
+  const section=document.getElementById('highlightSection');
+  const list=document.getElementById('highlightList');
+  const count=document.getElementById('highlightCount');
+
+  if(!highDays.length){
+    panel.style.display='none'; section.style.display='none'; return;
+  }
+  panel.style.display='block'; section.style.display='flex';
+  count.textContent=highDays.length+'건';
+  list.innerHTML='';
+  highDays.forEach(d=>{
+    const ev=roasEvents[d.date];
+    const item=document.createElement('div');
+    item.className='highlight-item editable';
+    item.innerHTML=`
+      <div class="hi-date">${d.date.slice(5)}</div>
+      <div class="hi-roas">${d.roas}%<small>ROAS</small></div>
+      <div class="hi-body">
+        <div class="hi-title">${ev?ev.title:'<span style="color:var(--muted);font-weight:400">이슈를 등록하세요</span>'}</div>
+        <div class="hi-desc">${ev?ev.desc:'구매 '+d.purchase+'건 · 매출 '+(d.revenue/10000).toFixed(0)+'만원 · CTR '+d.ctr.toFixed(2)+'% · 구매CVR '+d.purchaseCvr.toFixed(2)+'%'}</div>
+      </div>
+      <button class="hi-edit-btn" onclick="event.stopPropagation();openEventModal('${d.date}')">${ev?'수정':'+ 등록'}</button>
+    `;
+    item.onclick=()=>openEventModal(d.date);
+    list.appendChild(item);
+  });
+}
+
+// —— EVENT MODAL ——
+function openEventModal(date){
+  const modal=document.getElementById('eventModal');
+  const deleteBtn=document.getElementById('modalDeleteBtn');
+  document.getElementById('modalDateInput').value=date||new Date().toISOString().slice(0,10);
+  if(date){
+    document.getElementById('modalTitle').textContent='이슈 수정 — '+date;
+    const ev=roasEvents[date]||{title:'',desc:''};
+    document.getElementById('modalEventTitle').value=ev.title;
+    document.getElementById('modalEventDesc').value=ev.desc;
+    document.getElementById('modalDate').value=date;
+    deleteBtn.style.display=roasEvents[date]?'inline-block':'none';
+  } else {
+    document.getElementById('modalTitle').textContent='이슈 신규 등록';
+    document.getElementById('modalEventTitle').value='';
+    document.getElementById('modalEventDesc').value='';
+    document.getElementById('modalDate').value='';
+    deleteBtn.style.display='none';
+  }
+  modal.style.display='flex';
+  setTimeout(()=>document.getElementById('modalEventTitle').focus(),100);
+}
+function closeEventModal(){
+  document.getElementById('eventModal').style.display='none';
+}
+function saveEvent(){
+  const dateVal=document.getElementById('modalDateInput').value;
+  const title=document.getElementById('modalEventTitle').value.trim();
+  const desc=document.getElementById('modalEventDesc').value.trim();
+  if(!dateVal){alert('날짜를 입력하세요.');return;}
+  if(!title){alert('이슈 제목을 입력하세요.');return;}
+  roasEvents[dateVal]={title,desc};
+  closeEventModal();
+  applyFilters();
+}
+function deleteEvent(){
+  const dateVal=document.getElementById('modalDate').value;
+  if(dateVal&&roasEvents[dateVal]) delete roasEvents[dateVal];
+  closeEventModal();
+  applyFilters();
 }
 
 // —— MEDIA CHARTS ——
