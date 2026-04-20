@@ -642,11 +642,10 @@ textarea:focus{outline:none;border-color:var(--accent);}
       <h3>✨ Gemini AI 분석 보고서 <span class="mbadge">Beta</span></h3>
       <div style="font-size:11px;color:var(--muted)">현재 필터 기간 데이터 기반으로 보고서를 자동 생성합니다</div>
     </div>
-    <div class="ai-hint">
-      Gemini API 키를 입력하고 저장하면 이 브라우저에 영구 보관됩니다. 재접속 후에도 다시 입력할 필요 없습니다.<br>
-      API 키 발급 → <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com/app/apikey</a> (무료)
+    <div class="ai-hint" id="aiHintBox">
+      Gemini AI가 서버에 연결되어 있습니다. 버튼을 눌러 바로 보고서를 생성하세요.
     </div>
-    <div class="ai-key-row" id="aiKeyRow">
+    <div class="ai-key-row" id="aiKeyRow" style="display:none;">
       <input type="password" class="ai-key-input" id="geminiApiKey" placeholder="Gemini API Key 입력 (AIza...)"/>
       <button class="btn" onclick="toggleKeyVisibility()" id="keyVisBtn">👁 보기</button>
       <button class="btn btn-primary" onclick="saveApiKey()">저장</button>
@@ -1967,8 +1966,24 @@ ${allDailyRows}
 }
 
 async function callGemini(prompt){
+  // Cloudflare Worker 프록시 우선 사용 (API 키 서버 측 보관)
+  const isWorker = location.hostname.includes('workers.dev') || location.hostname.includes('pages.dev') || (location.hostname !== 'localhost' && location.protocol === 'https:');
+
+  if(isWorker){
+    const res = await fetch('/api/gemini', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({prompt})
+    });
+    const json = await res.json();
+    if(!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+    if(!json.text) throw new Error('응답 내용이 없습니다.');
+    return json.text;
+  }
+
+  // 로컬 개발 환경 — localStorage 키 직접 사용
   const key = localStorage.getItem('gemini_api_key') || document.getElementById('geminiApiKey').value.trim();
-  if(!key) throw new Error('API 키가 없습니다.');
+  if(!key) throw new Error('API 키를 입력하고 저장해 주세요.');
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
