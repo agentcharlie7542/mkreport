@@ -1997,8 +1997,11 @@ async function callGemini(prompt){
 }
 
 async function generateAIReport(){
-  const key = localStorage.getItem('gemini_api_key') || document.getElementById('geminiApiKey').value.trim();
-  if(!key){ alert('Gemini API 키를 입력하세요.'); return; }
+  const isWorker = location.hostname.includes('workers.dev') || location.hostname.includes('pages.dev') || (location.hostname !== 'localhost' && location.protocol === 'https:');
+  if(!isWorker){
+    const key = localStorage.getItem('gemini_api_key') || document.getElementById('geminiApiKey').value.trim();
+    if(!key){ alert('Gemini API 키를 입력하세요.'); return; }
+  }
 
   lastAiData = getAiData();
   if(!lastAiData.length){ alert('분석할 데이터가 없습니다. 기간을 확인해 주세요.'); return; }
