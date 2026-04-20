@@ -643,14 +643,14 @@ textarea:focus{outline:none;border-color:var(--accent);}
       <div style="font-size:11px;color:var(--muted)">현재 필터 기간 데이터 기반으로 보고서를 자동 생성합니다</div>
     </div>
     <div class="ai-hint">
-      Google AI Studio에서 API 키를 발급받아 입력하세요.
-      API 키는 브라우저에만 저장되며 외부로 전송되지 않습니다.
-      → <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com/app/apikey</a>
+      Gemini API 키를 입력하고 저장하면 이 브라우저에 영구 보관됩니다. 재접속 후에도 다시 입력할 필요 없습니다.<br>
+      API 키 발급 → <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent);">aistudio.google.com/app/apikey</a> (무료)
     </div>
-    <div class="ai-key-row">
+    <div class="ai-key-row" id="aiKeyRow">
       <input type="password" class="ai-key-input" id="geminiApiKey" placeholder="Gemini API Key 입력 (AIza...)"/>
       <button class="btn" onclick="toggleKeyVisibility()" id="keyVisBtn">👁 보기</button>
       <button class="btn btn-primary" onclick="saveApiKey()">저장</button>
+      <span id="apiKeySaved" style="font-size:11px;color:var(--a2);display:none;">✅ 저장됨</span>
     </div>
     <div class="ai-period-select">
       <span class="filter-label" style="line-height:28px;">분석 기간:</span>
@@ -1831,9 +1831,22 @@ function toggleKeyVisibility(){
 
 function saveApiKey(){
   const key = document.getElementById('geminiApiKey').value.trim();
-  if(!key) return;
-  sessionStorage.setItem('gemini_api_key', key);
-  alert('API 키가 저장되었습니다.');
+  if(!key){ alert('API 키를 입력하세요.'); return; }
+  localStorage.setItem('gemini_api_key', key);
+  document.getElementById('geminiApiKey').value='';
+  document.getElementById('geminiApiKey').placeholder='저장된 키 사용 중';
+  const saved = document.getElementById('apiKeySaved');
+  saved.style.display='inline';
+  setTimeout(()=>saved.style.display='none', 3000);
+}
+
+function loadSavedApiKey(){
+  const key = localStorage.getItem('gemini_api_key');
+  if(key){
+    document.getElementById('geminiApiKey').placeholder='저장된 키 사용 중 (재입력하면 덮어쓰기)';
+    document.getElementById('apiKeySaved').style.display='inline';
+    setTimeout(()=>document.getElementById('apiKeySaved').style.display='none', 2000);
+  }
 }
 
 function getAiData(){
@@ -1954,7 +1967,7 @@ ${allDailyRows}
 }
 
 async function callGemini(prompt){
-  const key = document.getElementById('geminiApiKey').value.trim() || sessionStorage.getItem('gemini_api_key');
+  const key = localStorage.getItem('gemini_api_key') || document.getElementById('geminiApiKey').value.trim();
   if(!key) throw new Error('API 키가 없습니다.');
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,{
     method:'POST',
@@ -1969,8 +1982,8 @@ async function callGemini(prompt){
 }
 
 async function generateAIReport(){
-  const key = document.getElementById('geminiApiKey').value.trim() || sessionStorage.getItem('gemini_api_key');
-  if(!key){ alert('Gemini API 키를 입력하세요.\nhttps://aistudio.google.com/app/apikey 에서 발급받을 수 있습니다.'); return; }
+  const key = localStorage.getItem('gemini_api_key') || document.getElementById('geminiApiKey').value.trim();
+  if(!key){ alert('Gemini API 키를 입력하세요.'); return; }
 
   lastAiData = getAiData();
   if(!lastAiData.length){ alert('분석할 데이터가 없습니다. 기간을 확인해 주세요.'); return; }
@@ -2040,6 +2053,7 @@ function initDashboard(){
   document.getElementById('toDate').value='';
   applyFilters();
   document.getElementById('lastUpdate').textContent='로드 완료';
+  loadSavedApiKey();
 }
 
 // —— INIT ——
