@@ -1,3 +1,5 @@
+import dashboardHtml from '../2026-04-20_mileat-da-interactive.html';
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -58,7 +60,9 @@ export default {
       }
     }
 
-    // 정적 파일 서빙 (HTML, CSS, JS 등)
-    return env.ASSETS.fetch(request);
+    // 대시보드 HTML 서빙
+    return new Response(dashboardHtml, {
+      headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+    });
   },
 };

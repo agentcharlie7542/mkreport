@@ -2,6 +2,7 @@ name = "axmarketingsystem"
 main = "src/index.js"
 compatibility_date = "2025-04-20"
 
-[assets]
-directory = "."
-binding = "ASSETS"
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
