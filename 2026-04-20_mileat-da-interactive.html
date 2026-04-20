@@ -16,6 +16,45 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 
+/* —— LOGIN OVERLAY —— */
+#loginOverlay{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+}
+.login-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:16px;padding:40px 36px;width:100%;max-width:400px;
+  box-shadow:0 24px 64px rgba(0,0,0,.5);
+}
+.login-logo{
+  text-align:center;margin-bottom:28px;
+}
+.login-logo .brand{font-size:22px;font-weight:700;letter-spacing:-.3px;}
+.login-logo .brand span{color:var(--accent);}
+.login-logo .sub{font-size:12px;color:var(--muted);margin-top:4px;}
+.login-field{margin-bottom:16px;}
+.login-field label{display:block;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.login-field input{
+  width:100%;padding:10px 14px;background:var(--card);
+  border:1px solid var(--border);border-radius:8px;
+  color:var(--text);font-size:14px;font-family:inherit;
+  transition:border-color .15s;
+}
+.login-field input:focus{outline:none;border-color:var(--accent);}
+.login-err{
+  font-size:12px;color:var(--a3);margin-bottom:14px;
+  min-height:18px;text-align:center;
+}
+.login-btn{
+  width:100%;padding:11px;background:var(--accent);border:none;
+  border-radius:8px;color:#fff;font-size:14px;font-weight:600;
+  font-family:inherit;cursor:pointer;transition:background .15s;
+}
+.login-btn:hover{background:#5a52e0;}
+.login-footer{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;}
+#appWrapper{display:none;}
+
 /* —— TOPBAR —— */
 .topbar{
   display:flex;align-items:center;justify-content:space-between;
@@ -166,6 +205,30 @@ textarea:focus{outline:none;border-color:var(--accent);}
 </style>
 </head>
 <body>
+
+<!-- —— LOGIN OVERLAY —— -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="brand">밀잇 DA <span>Dashboard</span></div>
+      <div class="sub">AidenLab · 내부 전용 리포트</div>
+    </div>
+    <div class="login-field">
+      <label>이메일</label>
+      <input type="email" id="loginEmail" placeholder="이메일 주소 입력" autocomplete="username"/>
+    </div>
+    <div class="login-field">
+      <label>비밀번호</label>
+      <input type="password" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+    </div>
+    <div class="login-err" id="loginErr"></div>
+    <button class="login-btn" onclick="doLogin()">로그인</button>
+    <div class="login-footer">© 2026 AidenLab. 권한 없는 접근 금지.</div>
+  </div>
+</div>
+
+<!-- —— APP WRAPPER —— -->
+<div id="appWrapper">
 
 <!-- —— TOPBAR —— -->
 <div class="topbar">
@@ -403,6 +466,8 @@ textarea:focus{outline:none;border-color:var(--accent);}
 </div><!-- /main -->
 
 <div class="footer">밀잇 DA Interactive Dashboard &nbsp;|&nbsp; GTM Skills Plugin &nbsp;|&nbsp; 데이터는 브라우저 로컬에만 저장됩니다.</div>
+
+</div><!-- /appWrapper -->
 
 <script>
 // ————————————————————————————————————————
@@ -875,11 +940,48 @@ function exportCSV(){
   a.click();
 }
 
+// —— LOGIN ——
+(function(){
+  const KEY = 'mileat_auth';
+  if(sessionStorage.getItem(KEY)==='ok'){
+    document.getElementById('loginOverlay').style.display='none';
+    document.getElementById('appWrapper').style.display='block';
+  }
+})();
+
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pw    = document.getElementById('loginPw').value;
+  const errEl = document.getElementById('loginErr');
+  const AU = 'marketing@aidenlab.io';
+  const AP = 'mealit500$$';
+  if(email === AU && pw === AP){
+    sessionStorage.setItem('mileat_auth','ok');
+    document.getElementById('loginOverlay').style.display='none';
+    document.getElementById('appWrapper').style.display='block';
+    initDashboard();
+  } else {
+    errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
+    document.getElementById('loginPw').value='';
+    document.getElementById('loginPw').focus();
+    setTimeout(()=>errEl.textContent='', 3000);
+  }
+}
+
+function initDashboard(){
+  document.getElementById('fromDate').value='';
+  document.getElementById('toDate').value='';
+  applyFilters();
+  document.getElementById('lastUpdate').textContent='로드 완료';
+}
+
 // —— INIT ——
-document.getElementById('fromDate').value='';
-document.getElementById('toDate').value='';
-applyFilters();
-document.getElementById('lastUpdate').textContent='로드 완료';
+if(sessionStorage.getItem('mileat_auth')==='ok'){
+  document.getElementById('fromDate').value='';
+  document.getElementById('toDate').value='';
+  applyFilters();
+  document.getElementById('lastUpdate').textContent='로드 완료';
+}
 </script>
 </body>
 </html>
