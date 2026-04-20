@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>밀잇 DA Weekly Report — 4월 2주차</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --card: #22263a;
+      --border: #2e3352;
+      --accent: #6c63ff;
+      --accent2: #00d4aa;
+      --accent3: #ff6b6b;
+      --accent4: #ffd93d;
+      --text: #e8eaf0;
+      --muted: #8a8fa8;
+      --meta: #4267b2;
+      --gfa: #03c75a;
+      --google: #ea4335;
+      --kakao: #fee500;
+      --tiktok: #010101;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 28px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header-left h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.3px; }
+    .header-left h1 span { color: var(--accent); }
+    .header-left .subtitle { font-size: 13px; color: var(--muted); margin-top: 4px; }
+    .header-badge {
+      background: var(--accent);
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      align-self: flex-start;
+    }
+
+    /* SECTION TITLE */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* KPI CARDS */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--card-accent, var(--accent));
+    }
+    .kpi-label { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 24px; font-weight: 700; margin-top: 6px; line-height: 1; }
+    .kpi-sub { font-size: 11px; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+    .kpi-sub.up { color: var(--accent2); }
+    .kpi-sub.down { color: var(--accent3); }
+    .kpi-sub.neutral { color: var(--muted); }
+
+    /* GRID LAYOUT */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    /* CHART CARD */
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 0;
+    }
+    .chart-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+    .chart-card h3 small { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 6px; }
+    .chart-wrapper { position: relative; height: 220px; }
+
+    /* TABLE */
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      overflow-x: auto;
+    }
+    .table-card h3 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    thead th {
+      background: var(--surface);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      padding: 10px 12px;
+      text-align: right;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    thead th:first-child { text-align: left; border-radius: 6px 0 0 0; }
+    thead th:last-child { border-radius: 0 6px 0 0; }
+    tbody td { padding: 10px 12px; text-align: right; border-bottom: 1px solid var(--border); color: var(--text); }
+    tbody td:first-child { text-align: left; font-weight: 600; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr.total-row { background: rgba(108,99,255,0.08); }
+    tbody tr.total-row td { font-weight: 700; color: var(--accent); border-top: 1px solid var(--border); }
+    .badge-meta { color: #5b9bd5; }
+    .badge-gfa { color: var(--gfa); }
+    .badge-google { color: var(--google); }
+    .badge-kakao { color: #c8a800; }
+    .badge-tiktok { color: var(--muted); }
+    .roas-high { color: var(--accent2); font-weight: 700; }
+    .roas-mid { color: var(--accent4); font-weight: 600; }
+    .roas-low { color: var(--accent3); }
+    .dash { color: var(--border); }
+
+    /* INSIGHTS */
+    .insight-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .insight-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      border-left: 3px solid var(--accent);
+    }
+    .insight-item.adjust { border-left-color: var(--accent3); }
+    .insight-item.done { border-left-color: var(--accent2); }
+    .insight-item.monitor { border-left-color: var(--accent4); }
+    .insight-week { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .insight-title { font-size: 12.5px; font-weight: 600; margin-bottom: 4px; line-height: 1.4; }
+    .insight-desc { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+    /* HISTORY */
+    .history-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      align-items: flex-start;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-date { min-width: 70px; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .history-media { min-width: 50px; font-size: 11px; font-weight: 600; }
+    .history-person { min-width: 45px; color: var(--muted); font-size: 11px; margin-top: 2px; }
+    .history-content { flex: 1; line-height: 1.5; color: var(--text); }
+    .history-reason { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* CONTENT PERFORMANCE */
+    .content-perf {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .content-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .content-name { font-size: 11.5px; font-weight: 600; margin-bottom: 6px; line-height: 1.4; color: var(--text); }
+    .content-meta { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    .content-roas { font-size: 18px; font-weight: 700; color: var(--accent2); }
+    .content-roas span { font-size: 11px; font-weight: 400; color: var(--muted); }
+    .content-insight { font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+
+    /* FOOTER */
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* SPEND BAR */
+    .spend-bar-wrap { display: flex; align-items: center; gap: 8px; }
+    .spend-bar-bg { flex: 1; height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .spend-bar-fill { height: 100%; border-radius: 2px; }
+
+    .mb-20 { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-left">
+    <h1>밀잇 DA <span>Weekly Report</span></h1>
+    <div class="subtitle">기간: 2026년 04월 06일 ~ 04월 12일 &nbsp;|&nbsp; 보고일: 2026-04-20</div>
+  </div>
+  <div class="header-badge">4월 2주차</div>
+</div>
+
+<!-- KPI SECTION -->
+<div class="section-title">주요 KPI — 이번 주 종합</div>
+<div class="kpi-grid">
+  <div class="kpi-card" style="--card-accent:#6c63ff">
+    <div class="kpi-label">총 광고비용</div>
+    <div class="kpi-value">2,563만</div>
+    <div class="kpi-sub neutral">25,628,266원 (전주 대비 +3.3%)</div>
+  </div>
+  <div class="kpi-card" style="--card-accent:#00d4aa">
+    <div class="kpi-label">총 매출</div>
+    <div class="kpi-value">5,081만</div>
+    <div class="kpi-sub up">▲ 전주 대비 +3.7%</div>
+  </div>
+  <div class="kpi-card" style="--card-accent:#ffd93d">
+    <div class="kpi-label">ROAS</div>
+    <div class="kpi-value">198%</div>
+    <div class="kpi-sub neutral">전주 동일 (4월 1주차 198%)</div>
+  </div>
+  <div class="kpi-card" style="--card-accent:#ff6b6b">
+    <div class="kpi-label">총 구매</div>
+    <div class="kpi-value">958건</div>
+    <div class="kpi-sub up">▲ 전주 대비 +12.2%</div>
+  </div>
+  <div class="kpi-card" style="--card-accent:#00d4aa">
+    <div class="kpi-label">평균 CTR</div>
+    <div class="kpi-value">1.10%</div>
+    <div class="kpi-sub neutral">전주 동일 (1.10%)</div>
+  </div>
+  <div class="kpi-card" style="--card-accent:#6c63ff">
+    <div class="kpi-label">평균 CPC</div>
+    <div class="kpi-value">755원</div>
+    <div class="kpi-sub down">▼ 전주 대비 +4.9% 상승</div>
+  </div>
+  <div class="kpi-card" style="--card-accent:#ffd93d">
+    <div class="kpi-label">구매 CPA</div>
+    <div class="kpi-value">26,752원</div>
+    <div class="kpi-sub up">▲ 전주 대비 -7.9% 개선</div>
+  </div>
+  <div class="kpi-card" style="--card-accent:#ff6b6b">
+    <div class="kpi-label">구매 CVR</div>
+    <div class="kpi-value">2.82%</div>
+    <div class="kpi-sub up">▲ 전주 대비 +13.7% 개선</div>
+  </div>
+</div>
+
+<!-- MEDIA + WEEKLY CHARTS -->
+<div class="grid-2 mb-20">
+  <div class="chart-card">
+    <h3>매체별 ROAS <small>4월 2주차</small></h3>
+    <div class="chart-wrapper">
+      <canvas id="roasChart"></canvas>
+    </div>
+  </div>
+  <div class="chart-card">
+    <h3>매체별 광고비 비중 <small>4월 2주차</small></h3>
+    <div class="chart-wrapper">
+      <canvas id="spendShareChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- WEEKLY TREND -->
+<div class="chart-card mb-20">
+  <h3>주차별 트렌드 <small>3월 3주차 ~ 4월 2주차</small></h3>
+  <div class="chart-wrapper" style="height:260px">
+    <canvas id="weeklyTrendChart"></canvas>
+  </div>
+</div>
+
+<!-- MEDIA TABLE -->
+<div class="section-title">매체별 상세 성과</div>
+<div class="table-card mb-20">
+  <h3>매체별 성과 — 4월 2주차 (04/06 ~ 04/12)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>매체</th>
+        <th>광고비용</th>
+        <th>노출</th>
+        <th>클릭</th>
+        <th>CTR</th>
+        <th>CPM</th>
+        <th>CPC</th>
+        <th>장바구니</th>
+        <th>구매</th>
+        <th>구매CVR</th>
+        <th>구매CPA</th>
+        <th>매출</th>
+        <th>ROAS</th>
+        <th>비중</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="badge-meta">■ Meta</td>
+        <td>21,387,729</td>
+        <td>2,007,780</td>
+        <td>23,121</td>
+        <td>1.15%</td>
+        <td>10,652</td>
+        <td>925</td>
+        <td>1,520</td>
+        <td>651</td>
+        <td>2.82%</td>
+        <td>32,854</td>
+        <td>36,982,807</td>
+        <td class="roas-mid">173%</td>
+        <td>
+          <div class="spend-bar-wrap">
+            83%
+            <div class="spend-bar-bg"><div class="spend-bar-fill" style="width:83%;background:#5b9bd5"></div></div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="badge-google">■ Google</td>
+        <td>2,595,953</td>
+        <td>455,570</td>
+        <td>7,570</td>
+        <td>1.66%</td>
+        <td>5,698</td>
+        <td>343</td>
+        <td class="dash">—</td>
+        <td>117</td>
+        <td>1.55%</td>
+        <td>22,188</td>
+        <td>11,411,653</td>
+        <td class="roas-high">440%</td>
+        <td>
+          <div class="spend-bar-wrap">
+            10%
+            <div class="spend-bar-bg"><div class="spend-bar-fill" style="width:10%;background:#ea4335"></div></div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="badge-gfa">■ GFA</td>
+        <td>1,008,737</td>
+        <td>89,514</td>
+        <td>1,629</td>
+        <td>1.82%</td>
+        <td>11,269</td>
+        <td>619</td>
+        <td>50</td>
+        <td>178</td>
+        <td>10.93%</td>
+        <td>5,667</td>
+        <td>1,653,530</td>
+        <td class="roas-mid">164%</td>
+        <td>
+          <div class="spend-bar-wrap">
+            4%
+            <div class="spend-bar-bg"><div class="spend-bar-fill" style="width:4%;background:#03c75a"></div></div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="badge-kakao">■ Kakao</td>
+        <td>635,847</td>
+        <td>529,034</td>
+        <td>1,629</td>
+        <td>0.31%</td>
+        <td>1,202</td>
+        <td>390</td>
+        <td>18</td>
+        <td>12</td>
+        <td>0.74%</td>
+        <td>52,987</td>
+        <td>758,027</td>
+        <td class="roas-low">119%</td>
+        <td>
+          <div class="spend-bar-wrap">
+            2%
+            <div class="spend-bar-bg"><div class="spend-bar-fill" style="width:2%;background:#c8a800"></div></div>
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td class="badge-tiktok">■ TikTok</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td>0%</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td>0%</td>
+        <td class="dash">—</td>
+        <td class="dash">—</td>
+        <td class="dash">0%</td>
+        <td>0%</td>
+      </tr>
+      <tr class="total-row">
+        <td>합계</td>
+        <td>25,628,266</td>
+        <td>3,081,898</td>
+        <td>33,949</td>
+        <td>1.10%</td>
+        <td>8,316</td>
+        <td>755</td>
+        <td>1,588</td>
+        <td>958</td>
+        <td>2.82%</td>
+        <td>26,752</td>
+        <td>50,806,017</td>
+        <td>198%</td>
+        <td>100%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- WEEKLY TABLE -->
+<div class="section-title">주차별 트렌드</div>
+<div class="table-card mb-20">
+  <h3>주차별 성과 누적 (3월 3주차 ~ 4월 2주차)</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>주차</th>
+        <th>광고비용</th>
+        <th>노출</th>
+        <th>클릭</th>
+        <th>CTR</th>
+        <th>구매</th>
+        <th>구매CVR</th>
+        <th>구매CPA</th>
+        <th>매출</th>
+        <th>ROAS</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>3월 3주차</td>
+        <td>22,135,443</td>
+        <td>2,651,552</td>
+        <td>29,050</td>
+        <td>1.10%</td>
+        <td>1,074</td>
+        <td>3.70%</td>
+        <td>20,610</td>
+        <td>60,228,582</td>
+        <td class="roas-high">272%</td>
+      </tr>
+      <tr>
+        <td>3월 4주차</td>
+        <td>27,098,519</td>
+        <td>4,832,791</td>
+        <td>27,618</td>
+        <td>0.57%</td>
+        <td>1,037</td>
+        <td>3.75%</td>
+        <td>26,132</td>
+        <td>55,728,696</td>
+        <td class="roas-mid">206%</td>
+      </tr>
+      <tr>
+        <td>3월 5주차</td>
+        <td>26,553,336</td>
+        <td>5,434,832</td>
+        <td>37,167</td>
+        <td>0.68%</td>
+        <td>886</td>
+        <td>2.38%</td>
+        <td>29,970</td>
+        <td>47,540,239</td>
+        <td class="roas-mid">179%</td>
+      </tr>
+      <tr>
+        <td>4월 1주차</td>
+        <td>24,797,574</td>
+        <td>3,137,798</td>
+        <td>34,445</td>
+        <td>1.10%</td>
+        <td>854</td>
+        <td>2.48%</td>
+        <td>29,036</td>
+        <td>49,010,542</td>
+        <td class="roas-mid">198%</td>
+      </tr>
+      <tr>
+        <td><strong>4월 2주차 ◀</strong></td>
+        <td>25,628,266</td>
+        <td>3,081,898</td>
+        <td>33,949</td>
+        <td>1.10%</td>
+        <td><strong>958</strong></td>
+        <td>2.82%</td>
+        <td>26,752</td>
+        <td>50,806,017</td>
+        <td class="roas-mid">198%</td>
+      </tr>
+      <tr class="total-row">
+        <td>전체 합계</td>
+        <td>126,213,139</td>
+        <td>19,138,871</td>
+        <td>162,229</td>
+        <td>0.85%</td>
+        <td>4,809</td>
+        <td>2.96%</td>
+        <td>26,245</td>
+        <td>263,314,076</td>
+        <td>209%</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- DAILY CHART -->
+<div class="section-title">일자별 성과</div>
+<div class="chart-card mb-20">
+  <h3>일자별 ROAS / 매출 트렌드 <small>2026-03-16 ~ 04-19</small></h3>
+  <div class="chart-wrapper" style="height:280px">
+    <canvas id="dailyChart"></canvas>
+  </div>
+</div>
+
+<!-- INSIGHTS -->
+<div class="section-title">캠페인 인사이트</div>
+<div class="insight-grid mb-20">
+  <div class="insight-item done">
+    <div class="insight-week">4월 1주차 · Meta · 조정 완료</div>
+    <div class="insight-title">그랜드라 캠페인 유지 및 예산 반영</div>
+    <div class="insight-desc">최근 2주 평균 ROAS 220% 이상 유지 → 유지 결정 및 전체 기간 ROAS 200%+ 이상 라이브 재개</div>
+  </div>
+  <div class="insight-item adjust">
+    <div class="insight-week">3월 5주차 · Meta · 조정 완료</div>
+    <div class="insight-title">전동아이포크 일예산 증액 (3만→5만)</div>
+    <div class="insight-desc">4/2~라이브, 평균 ROAS 220%로 잠재력 높음 → 승인 후 처리 완료</div>
+  </div>
+  <div class="insight-item done">
+    <div class="insight-week">4월 1주차 · Meta · 조정 완료</div>
+    <div class="insight-title">450 메인 캠페인 예산 하향 (8→5만)</div>
+    <div class="insight-desc">최근 30일 평균 ROAS 165%로 저조 → 일예산 감액 처리 완료</div>
+  </div>
+  <div class="insight-item monitor">
+    <div class="insight-week">3월 5주차 · Meta · 모니터링</div>
+    <div class="insight-title">핫도그 SLD — 클릭률↑ 구매율↓</div>
+    <div class="insight-desc">CPC 181원, CTR 6.08%로 유입은 우수하나 ROAS 102%. 소시지 랜딩페이지 메시지 불일치로 이탈률 높음 → 핫도그 랜딩 장치 및 할인 내용 추가 권장</div>
+  </div>
+  <div class="insight-item done">
+    <div class="insight-week">4월 2주차 · Google · 조정 완료</div>
+    <div class="insight-title">Pmax + DG 예산 증액 (10→15만)</div>
+    <div class="insight-desc">Google ROAS 440%로 전체 매체 중 최고 효율 → 예산 증액 처리 완료</div>
+  </div>
+  <div class="insight-item adjust">
+    <div class="insight-week">4월 2주차 · Meta · 진행중</div>
+    <div class="insight-title">고효율 소재 CBO 복제 전략</div>
+    <div class="insight-desc">[560] 260410_지금사면 ROAS 300%대, [560] 260402_핫도그2차 ROAS 220%+ 지속 영향 → CBO 복제 완료</div>
+  </div>
+</div>
+
+<!-- CONTENT PERFORMANCE -->
+<div class="section-title">콘텐츠 성과 인사이트</div>
+<div class="chart-card mb-20">
+  <h3>소재 운영 현황</h3>
+  <div class="content-perf">
+    <div class="content-item">
+      <div class="content-name">여기서만 리메이크 (시리얼)</div>
+      <div class="content-meta">META · 3/17~ 진행</div>
+      <div class="content-roas">276% <span>ROAS</span></div>
+      <div class="content-insight">여기서만 50% 할인 / 포마 1,600원 가격 소구 릴스</div>
+    </div>
+    <div class="content-item">
+      <div class="content-name">소바이브 리 (소스 1.1)</div>
+      <div class="content-meta">META · 3/17~ 진행</div>
+      <div class="content-roas">237% <span>ROAS</span></div>
+      <div class="content-insight">소이포크 통 컬러 변화로 다양한 맛 강조 (GIF)</div>
+    </div>
+    <div class="content-item">
+      <div class="content-name">미미미닭2 광고 이미지</div>
+      <div class="content-meta">META · 1/27~ 진행</div>
+      <div class="content-roas">257% <span>ROAS</span></div>
+      <div class="content-insight">미미미닭 세트 중 최고 효율. 할인율(60%) 메인 강조</div>
+    </div>
+    <div class="content-item">
+      <div class="content-name">쿠스크 추석2 (이미지 1.1)</div>
+      <div class="content-meta">META · 3/6~ 진행</div>
+      <div class="content-roas">188% <span>ROAS</span></div>
+      <div class="content-insight">스파티팝 번들 소구 → 안정적 성과 유지</div>
+    </div>
+  </div>
+</div>
+
+<!-- HISTORY -->
+<div class="section-title">캠페인 변경 이력 (최근)</div>
+<div class="chart-card mb-20">
+  <h3>History — 4월 이후 주요 변경사항</h3>
+  <div class="history-item">
+    <div class="history-date">04/20</div>
+    <div class="history-media badge-meta">Meta</div>
+    <div class="history-person">김선호</div>
+    <div>
+      <div class="history-content">고효율 소재 CBO 복제 (지금사면, 핫도그2차), 저성과 소재 다수 OFF</div>
+      <div class="history-reason">최근 2주 ROAS 300%대·220%대 연속 / 저성과 소재 정리</div>
+    </div>
+  </div>
+  <div class="history-item">
+    <div class="history-date">04/15</div>
+    <div class="history-media badge-meta">Meta</div>
+    <div class="history-person">우찬호</div>
+    <div>
+      <div class="history-content">미미미닭 캠페인 예산 증액 (30→35만)</div>
+      <div class="history-reason">7일 이후 ROAS 201% → 3일 279% 개선 추세</div>
+    </div>
+  </div>
+  <div class="history-item">
+    <div class="history-date">04/14</div>
+    <div class="history-media badge-meta">Meta</div>
+    <div class="history-person">김선호</div>
+    <div>
+      <div class="history-content">저성과 소재 다거 정리 — PS/450, 트렌드조이, 이겨봐, 전동아이포크 등 OFF</div>
+      <div class="history-reason">최근 1~2주 ROAS 60~100% 미만 소재 정리</div>
+    </div>
+  </div>
+  <div class="history-item">
+    <div class="history-date">04/09</div>
+    <div class="history-media badge-meta">Meta</div>
+    <div class="history-person">우찬호</div>
+    <div>
+      <div class="history-content">김우선 비대마크 증액 (8→10만) / 예산 비율 20% 설정</div>
+      <div class="history-reason">최근 7일 고성과</div>
+    </div>
+  </div>
+  <div class="history-item">
+    <div class="history-date">04/09</div>
+    <div class="history-media badge-google">Google</div>
+    <div class="history-person">김선호</div>
+    <div>
+      <div class="history-content">Pmax 예산 증액 (10→15만) / DG 신규 캠페인 운영 (일예산 10만)</div>
+      <div class="history-reason">Google ROAS 440% 고효율 채널 강화</div>
+    </div>
+  </div>
+  <div class="history-item">
+    <div class="history-date">04/06</div>
+    <div class="history-media badge-google">Google</div>
+    <div class="history-person">우찬호</div>
+    <div>
+      <div class="history-content">DG 예산 증액 (10→15만)</div>
+      <div class="history-reason">성과 우수 채널 예산 확대</div>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  밀잇 DA Weekly Report &nbsp;|&nbsp; 작성일: 2026-04-20 &nbsp;|&nbsp; GTM Skills Plugin 대시보드
+</div>
+
+<script>
+const gridColor = 'rgba(46,51,82,0.7)';
+const tickColor = '#8a8fa8';
+const fontFamily = "'Segoe UI','Apple SD Gothic Neo',sans-serif";
+Chart.defaults.color = tickColor;
+Chart.defaults.font.family = fontFamily;
+Chart.defaults.font.size = 11;
+
+// 1. 매체별 ROAS 바 차트
+new Chart(document.getElementById('roasChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Meta', 'GFA', 'Google', 'Kakao'],
+    datasets: [{
+      label: 'ROAS (%)',
+      data: [173, 164, 440, 119],
+      backgroundColor: ['#5b9bd5','#03c75a','#ea4335','#c8a800'],
+      borderRadius: 6,
+      borderSkipped: false,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.raw}%` } }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+      y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => v+'%' }, beginAtZero: true }
+    }
+  }
+});
+
+// 2. 광고비 비중 도넛 차트
+new Chart(document.getElementById('spendShareChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Meta (83%)', 'Google (10%)', 'GFA (4%)', 'Kakao (2%)', 'TikTok (0%)'],
+    datasets: [{
+      data: [83, 10, 4, 2, 1],
+      backgroundColor: ['#5b9bd5','#ea4335','#03c75a','#c8a800','#555'],
+      borderWidth: 0,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { position: 'right', labels: { color: tickColor, boxWidth: 10, padding: 10, font: { size: 11 } } }
+    }
+  }
+});
+
+// 3. 주차별 트렌드 콤보 차트
+const weeks = ['3월3주','3월4주','3월5주','4월1주','4월2주▶'];
+new Chart(document.getElementById('weeklyTrendChart'), {
+  type: 'bar',
+  data: {
+    labels: weeks,
+    datasets: [
+      {
+        type: 'bar', label: '광고비 (만원)',
+        data: [2214, 2710, 2655, 2480, 2563],
+        backgroundColor: 'rgba(108,99,255,0.45)',
+        borderRadius: 5, yAxisID: 'y',
+      },
+      {
+        type: 'bar', label: '매출 (만원)',
+        data: [6023, 5573, 4754, 4901, 5081],
+        backgroundColor: 'rgba(0,212,170,0.45)',
+        borderRadius: 5, yAxisID: 'y',
+      },
+      {
+        type: 'line', label: 'ROAS (%)',
+        data: [272, 206, 179, 198, 198],
+        borderColor: '#ffd93d',
+        backgroundColor: 'rgba(255,217,61,0.1)',
+        tension: 0.4,
+        pointBackgroundColor: '#ffd93d',
+        pointRadius: 5,
+        yAxisID: 'y2', fill: true,
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { labels: { color: tickColor, boxWidth: 12, padding: 12 } },
+      tooltip: { mode: 'index', intersect: false }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: tickColor } },
+      y: { grid: { color: gridColor }, ticks: { color: tickColor, callback: v => v+'만' }, position: 'left', title: { display: true, text: '비용/매출 (만원)', color: tickColor } },
+      y2: { grid: { display: false }, ticks: { color: '#ffd93d', callback: v => v+'%' }, position: 'right', title: { display: true, text: 'ROAS', color: '#ffd93d' } }
+    }
+  }
+});
+
+// 4. 일자별 ROAS + 매출 라인 차트
+const dailyLabels = [
+  '3/16','3/17','3/18','3/19','3/20','3/21','3/22',
+  '3/23','3/24','3/25','3/26','3/27','3/28','3/29',
+  '3/30','3/31','4/1','4/2','4/3','4/4','4/5',
+  '4/6','4/7','4/8','4/9','4/10','4/11','4/12',
+  '4/13','4/14','4/15','4/16','4/17','4/18','4/19'
+];
+const dailyRoas    = [304,258,278,195,190,139,493,264,261,392,192,188,115,113,162,141,248,218,183,170,163,245,237,146,225,194,157,178,190,211,208,232,166,180,200];
+const dailyRevenue = [711,827,864,628,593,439,1959,1138,888,1139,739,595,492,582,754,719,777,757,599,537,611,911,827,499,760,667,524,713,756,762,748,818,581,620,796];
+
+new Chart(document.getElementById('dailyChart'), {
+  type: 'line',
+  data: {
+    labels: dailyLabels,
+    datasets: [
+      {
+        label: '매출 (만원)',
+        data: dailyRevenue,
+        borderColor: '#00d4aa',
+        backgroundColor: 'rgba(0,212,170,0.08)',
+        tension: 0.4, pointRadius: 2, fill: true, yAxisID: 'y',
+      },
+      {
+        label: 'ROAS (%)',
+        data: dailyRoas,
+        borderColor: '#ffd93d',
+        backgroundColor: 'rgba(255,217,61,0.06)',
+        tension: 0.4, pointRadius: 2, fill: false, yAxisID: 'y2',
+        borderDash: [4,3],
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { labels: { color: tickColor, boxWidth: 12, padding: 12 } },
+      tooltip: { callbacks: { label: ctx => ctx.dataset.label === 'ROAS (%)' ? ` ROAS ${ctx.raw}%` : ` 매출 ${ctx.raw}만원` } }
+    },
+    scales: {
+      x: { grid: { color: gridColor }, ticks: { color: tickColor, maxTicksLimit: 18 } },
+      y: { grid: { color: gridColor }, ticks: { color: '#00d4aa', callback: v => v+'만' }, position: 'left' },
+      y2: { grid: { display: false }, ticks: { color: '#ffd93d', callback: v => v+'%' }, position: 'right' }
+    }
+  }
+});
+</script>
+</body>
+</html>

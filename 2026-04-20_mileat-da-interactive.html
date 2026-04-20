@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>밀잇 DA Dashboard — Interactive</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--card:#22263a;--border:#2e3352;
+  --accent:#6c63ff;--a2:#00d4aa;--a3:#ff6b6b;--a4:#ffd93d;
+  --text:#e8eaf0;--muted:#8a8fa8;--meta:#5b9bd5;--gfa:#03c75a;
+  --google:#ea4335;--kakao:#c8a800;
+  --radius:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* —— TOPBAR —— */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;background:var(--surface);
+  border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;
+  flex-wrap:wrap;gap:10px;
+}
+.topbar-title{font-size:15px;font-weight:700;}
+.topbar-title span{color:var(--accent);}
+.topbar-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.btn{
+  padding:6px 14px;border-radius:6px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-size:12px;cursor:pointer;
+  font-family:inherit;transition:all .15s;
+}
+.btn:hover{border-color:var(--accent);color:var(--accent);}
+.btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.btn-icon{padding:6px 10px;}
+
+/* —— FILTER BAR —— */
+.filterbar{
+  display:flex;align-items:center;gap:10px;padding:12px 24px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-wrap:wrap;
+}
+.filter-group{display:flex;align-items:center;gap:6px;}
+.filter-label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;white-space:nowrap;}
+.date-input{
+  padding:5px 10px;background:var(--card);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;
+}
+.date-input:focus{outline:none;border-color:var(--accent);}
+.channel-check{display:flex;gap:6px;flex-wrap:wrap;}
+.channel-chip{
+  padding:4px 10px;border-radius:20px;border:1px solid var(--border);
+  background:var(--card);color:var(--muted);font-size:11px;cursor:pointer;
+  font-weight:600;transition:all .15s;user-select:none;
+}
+.channel-chip.on{color:#fff;}
+.chip-meta.on{background:var(--meta);border-color:var(--meta);}
+.chip-gfa.on{background:var(--gfa);border-color:var(--gfa);}
+.chip-google.on{background:var(--google);border-color:var(--google);}
+.chip-kakao.on{background:var(--kakao);border-color:var(--kakao);}
+.chip-all.on{background:var(--accent);border-color:var(--accent);}
+.select{
+  padding:5px 10px;background:var(--card);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;cursor:pointer;
+}
+.select:focus{outline:none;border-color:var(--accent);}
+.divider{width:1px;height:20px;background:var(--border);}
+
+/* —— MAIN —— */
+.main{padding:20px 24px;}
+
+/* —— KPI —— */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px;}
+.kpi-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;position:relative;overflow:hidden;
+}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--kc,var(--accent));}
+.kpi-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.kpi-val{font-size:22px;font-weight:700;margin-top:5px;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+.kpi-sub.up{color:var(--a2);}
+.kpi-sub.dn{color:var(--a3);}
+
+/* —— CHART CARDS —— */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.chart-row.wide{grid-template-columns:1fr;}
+@media(max-width:800px){.chart-row{grid-template-columns:1fr;}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;}
+.chart-card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+.chart-card-hdr h3{font-size:13px;font-weight:600;}
+.chart-card-hdr h3 small{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px;}
+.chart-wrap{position:relative;height:220px;}
+.chart-wrap.tall{height:280px;}
+
+/* —— TABLE —— */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px;}
+thead th{background:var(--surface);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px;padding:9px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+thead th:first-child{text-align:left;}
+tbody td{padding:9px 10px;text-align:right;border-bottom:1px solid rgba(46,51,82,.5);white-space:nowrap;}
+tbody td:first-child{text-align:left;font-weight:600;}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr.total{background:rgba(108,99,255,.06);}
+tbody tr.total td{font-weight:700;color:var(--accent);}
+.rh{color:var(--a2);font-weight:700;}
+.rm{color:var(--a4);}
+.rl{color:var(--a3);}
+.dash{color:var(--border);}
+
+/* —— DATA PANEL —— */
+.data-panel{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:14px;overflow:hidden;
+}
+.data-panel-hdr{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;cursor:pointer;user-select:none;
+}
+.data-panel-hdr h3{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.data-panel-hdr .chevron{transition:transform .2s;color:var(--muted);}
+.data-panel-hdr.open .chevron{transform:rotate(180deg);}
+.data-panel-body{display:none;padding:0 18px 18px;}
+.data-panel-body.open{display:block;}
+.data-tabs{display:flex;gap:6px;margin-bottom:14px;}
+.data-tab{padding:5px 14px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;cursor:pointer;font-family:inherit;}
+.data-tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+.data-section{display:none;}
+.data-section.active{display:block;}
+textarea{
+  width:100%;height:150px;background:var(--card);border:1px solid var(--border);
+  border-radius:8px;color:var(--text);font-family:'Courier New',monospace;font-size:12px;
+  padding:10px;resize:vertical;line-height:1.5;
+}
+textarea:focus{outline:none;border-color:var(--accent);}
+.data-hint{font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6;}
+.data-hint code{background:var(--card);padding:1px 5px;border-radius:3px;color:var(--a4);font-size:11px;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-group label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;}
+.form-group input,.form-group select{
+  padding:6px 10px;background:var(--card);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-size:12px;font-family:inherit;
+}
+.form-group input:focus,.form-group select:focus{outline:none;border-color:var(--accent);}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;padding:8px 18px;}
+.btn-primary:hover{background:#5a52e0;border-color:#5a52e0;color:#fff;}
+.btn-danger{color:var(--a3);border-color:var(--a3);}
+.btn-danger:hover{background:var(--a3);color:#fff;}
+.data-status{font-size:11px;color:var(--a2);margin-top:8px;min-height:16px;}
+
+/* —— SECTION TITLE —— */
+.sec-title{
+  font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.8px;margin-bottom:10px;margin-top:4px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* —— METRIC BADGE —— */
+.mbadge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:rgba(108,99,255,.2);color:var(--accent);}
+
+/* —— FOOTER —— */
+.footer{text-align:center;color:var(--muted);font-size:11px;padding:20px;border-top:1px solid var(--border);margin-top:8px;}
+</style>
+</head>
+<body>
+
+<!-- —— TOPBAR —— -->
+<div class="topbar">
+  <div class="topbar-title">밀잇 DA <span>Dashboard</span></div>
+  <div class="topbar-right">
+    <button class="btn btn-icon" onclick="toggleDataPanel()" title="데이터 입력">📥 데이터 입력</button>
+    <button class="btn" onclick="exportCSV()">⬇ CSV 내보내기</button>
+    <span id="lastUpdate" style="font-size:11px;color:var(--muted)">로드 중…</span>
+  </div>
+</div>
+
+<!-- —— FILTER BAR —— -->
+<div class="filterbar">
+  <div class="filter-group">
+    <span class="filter-label">기간</span>
+    <button class="btn" onclick="setPreset('thisWeek')">이번주</button>
+    <button class="btn" onclick="setPreset('lastWeek')">지난주</button>
+    <button class="btn" onclick="setPreset('last2w')">최근2주</button>
+    <button class="btn" onclick="setPreset('all')" id="presetAll">전체</button>
+  </div>
+  <div class="filter-group">
+    <input type="date" id="fromDate" class="date-input" onchange="applyFilters()"/>
+    <span style="color:var(--muted);font-size:12px">~</span>
+    <input type="date" id="toDate" class="date-input" onchange="applyFilters()"/>
+  </div>
+  <div class="divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">매체</span>
+    <div class="channel-check">
+      <div class="channel-chip chip-all on" id="chip-all" onclick="toggleChannel('all')">전체</div>
+      <div class="channel-chip chip-meta on" id="chip-Meta" onclick="toggleChannel('Meta')">Meta</div>
+      <div class="channel-chip chip-gfa on" id="chip-GFA" onclick="toggleChannel('GFA')">GFA</div>
+      <div class="channel-chip chip-google on" id="chip-Google" onclick="toggleChannel('Google')">Google</div>
+      <div class="channel-chip chip-kakao on" id="chip-Kakao" onclick="toggleChannel('Kakao')">Kakao</div>
+    </div>
+  </div>
+  <div class="divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">차트 지표</span>
+    <select class="select" id="metricSelect" onchange="applyFilters()">
+      <option value="roas">ROAS (%)</option>
+      <option value="revenue">매출 (원)</option>
+      <option value="spend">광고비용 (원)</option>
+      <option value="purchase">구매 (건)</option>
+      <option value="ctr">CTR (%)</option>
+      <option value="cpc">CPC (원)</option>
+      <option value="purchaseCvr">구매CVR (%)</option>
+      <option value="purchaseCpa">구매CPA (원)</option>
+    </select>
+  </div>
+  <div class="divider"></div>
+  <div class="filter-group">
+    <span class="filter-label">뷰</span>
+    <button class="btn active" id="viewDaily" onclick="setView('daily')">일별</button>
+    <button class="btn" id="viewWeekly" onclick="setView('weekly')">주차별</button>
+  </div>
+</div>
+
+<!-- —— MAIN —— -->
+<div class="main">
+
+  <!-- 데이터 입력 패널 -->
+  <div class="data-panel" id="dataPanel" style="display:none;">
+    <div class="data-panel-hdr open" id="dataPanelHdr" onclick="toggleDataBody()">
+      <h3>📥 데이터 입력 <span class="mbadge" id="rowCountBadge">0건</span></h3>
+      <span class="chevron">▼</span>
+    </div>
+    <div class="data-panel-body open" id="dataPanelBody">
+      <div class="data-tabs">
+        <button class="data-tab active" onclick="switchTab('paste')">CSV 붙여넣기</button>
+        <button class="data-tab" onclick="switchTab('form')">직접 입력</button>
+        <button class="data-tab" onclick="switchTab('manage')">데이터 관리</button>
+      </div>
+
+      <!-- CSV 붙여넣기 -->
+      <div class="data-section active" id="tab-paste">
+        <div class="data-hint">
+          스프레드시트에서 복사한 데이터를 붙여넣으세요. 첫 행은 헤더(생략 가능).<br>
+          컬럼 순서: <code>날짜</code> <code>광고비용</code> <code>노출</code> <code>클릭</code> <code>CTR%</code> <code>CPM</code> <code>CPC</code> <code>장바구니</code> <code>구매</code> <code>장바구니CVR%</code> <code>구매CVR%</code> <code>장바구니CPA</code> <code>구매CPA</code> <code>매출</code> <code>ROAS%</code><br>
+          숫자에 쉼표/% 포함되어도 자동 파싱됩니다.
+        </div>
+        <textarea id="csvInput" placeholder="2026-04-21&#9;3500000&#9;450000&#9;4800&#9;1.07%&#9;7778&#9;729&#9;250&#9;130&#9;5.21%&#9;2.71%&#9;14000&#9;26923&#9;7500000&#9;214%"></textarea>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="parsePaste()">데이터 추가</button>
+          <button class="btn btn-danger" onclick="clearAllData()">전체 초기화</button>
+          <div class="data-status" id="pasteStatus"></div>
+        </div>
+      </div>
+
+      <!-- 직접 입력 폼 -->
+      <div class="data-section" id="tab-form">
+        <div class="form-grid">
+          <div class="form-group"><label>날짜</label><input type="date" id="f-date"/></div>
+          <div class="form-group"><label>광고비용 (원)</label><input type="number" id="f-spend" placeholder="3500000"/></div>
+          <div class="form-group"><label>노출</label><input type="number" id="f-imp" placeholder="450000"/></div>
+          <div class="form-group"><label>클릭</label><input type="number" id="f-click" placeholder="4800"/></div>
+          <div class="form-group"><label>CTR (%)</label><input type="number" id="f-ctr" step="0.01" placeholder="1.07"/></div>
+          <div class="form-group"><label>CPM (원)</label><input type="number" id="f-cpm" placeholder="7778"/></div>
+          <div class="form-group"><label>CPC (원)</label><input type="number" id="f-cpc" placeholder="729"/></div>
+          <div class="form-group"><label>장바구니</label><input type="number" id="f-cart" placeholder="250"/></div>
+          <div class="form-group"><label>구매 (건)</label><input type="number" id="f-purchase" placeholder="130"/></div>
+          <div class="form-group"><label>장바구니CVR (%)</label><input type="number" id="f-cartCvr" step="0.01" placeholder="5.21"/></div>
+          <div class="form-group"><label>구매CVR (%)</label><input type="number" id="f-purchaseCvr" step="0.01" placeholder="2.71"/></div>
+          <div class="form-group"><label>장바구니CPA</label><input type="number" id="f-cartCpa" placeholder="14000"/></div>
+          <div class="form-group"><label>구매CPA</label><input type="number" id="f-purchaseCpa" placeholder="26923"/></div>
+          <div class="form-group"><label>매출 (원)</label><input type="number" id="f-revenue" placeholder="7500000"/></div>
+          <div class="form-group"><label>ROAS (%)</label><input type="number" id="f-roas" placeholder="214"/></div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="addFormRow()">행 추가</button>
+          <div class="data-status" id="formStatus"></div>
+        </div>
+      </div>
+
+      <!-- 데이터 관리 -->
+      <div class="data-section" id="tab-manage">
+        <div style="max-height:260px;overflow-y:auto;">
+          <table id="manageTable">
+            <thead><tr>
+              <th style="text-align:left">날짜</th>
+              <th>광고비용</th><th>매출</th><th>ROAS</th><th>구매</th><th>CTR</th>
+              <th style="text-align:center">삭제</th>
+            </tr></thead>
+            <tbody id="manageTbody"></tbody>
+          </table>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-danger" onclick="clearAllData()">전체 초기화 (기본 데이터 복원)</button>
+          <div class="data-status" id="manageStatus"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI 카드 -->
+  <div class="sec-title">핵심 지표 <span class="mbadge" id="kpiPeriodBadge">전체</span></div>
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--kc:var(--accent)">
+      <div class="kpi-lbl">총 광고비용</div>
+      <div class="kpi-val" id="k-spend">—</div>
+      <div class="kpi-sub" id="k-spend-sub">계산 중</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a2)">
+      <div class="kpi-lbl">총 매출</div>
+      <div class="kpi-val" id="k-revenue">—</div>
+      <div class="kpi-sub" id="k-revenue-sub">계산 중</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a4)">
+      <div class="kpi-lbl">ROAS</div>
+      <div class="kpi-val" id="k-roas">—</div>
+      <div class="kpi-sub" id="k-roas-sub">계산 중</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a3)">
+      <div class="kpi-lbl">총 구매</div>
+      <div class="kpi-val" id="k-purchase">—</div>
+      <div class="kpi-sub" id="k-purchase-sub">계산 중</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a2)">
+      <div class="kpi-lbl">평균 CTR</div>
+      <div class="kpi-val" id="k-ctr">—</div>
+      <div class="kpi-sub" id="k-ctr-sub">계산 중</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--accent)">
+      <div class="kpi-lbl">평균 CPC</div>
+      <div class="kpi-val" id="k-cpc">—</div>
+      <div class="kpi-sub" id="k-cpc-sub">계산 중</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a4)">
+      <div class="kpi-lbl">구매 CPA</div>
+      <div class="kpi-val" id="k-cpa">—</div>
+      <div class="kpi-sub" id="k-cpa-sub">계산 중</div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a3)">
+      <div class="kpi-lbl">구매 CVR</div>
+      <div class="kpi-val" id="k-cvr">—</div>
+      <div class="kpi-sub" id="k-cvr-sub">계산 중</div>
+    </div>
+  </div>
+
+  <!-- 트렌드 차트 -->
+  <div class="sec-title">트렌드</div>
+  <div class="chart-row wide">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <h3>일/주차별 성과 <small id="trendSubtitle">전체 기간</small></h3>
+      </div>
+      <div class="chart-wrap tall"><canvas id="trendChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 매체별 차트 2개 -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <h3>매체별 ROAS <small>4월 2주차</small></h3>
+      </div>
+      <div class="chart-wrap"><canvas id="mediaRoasChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-card-hdr">
+        <h3>매체별 광고비 비중 <small>4월 2주차</small></h3>
+      </div>
+      <div class="chart-wrap"><canvas id="mediaShareChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- 매체별 테이블 -->
+  <div class="sec-title">매체별 상세 — 4월 2주차</div>
+  <div class="table-card">
+    <table id="mediaTable">
+      <thead><tr>
+        <th style="text-align:left">매체</th>
+        <th>광고비용</th><th>노출</th><th>클릭</th><th>CTR</th>
+        <th>CPC</th><th>구매</th><th>구매CVR</th><th>구매CPA</th>
+        <th>매출</th><th>ROAS</th><th>비중</th>
+      </tr></thead>
+      <tbody id="mediaTbody"></tbody>
+    </table>
+  </div>
+
+  <!-- 일자별 테이블 (필터 결과) -->
+  <div class="sec-title">일자별 상세 <span class="mbadge" id="dailyBadge">0일</span></div>
+  <div class="table-card">
+    <table>
+      <thead><tr>
+        <th style="text-align:left">날짜</th>
+        <th>광고비용</th><th>노출</th><th>클릭</th><th>CTR</th>
+        <th>CPC</th><th>구매</th><th>구매CVR</th><th>구매CPA</th>
+        <th>매출</th><th>ROAS</th>
+      </tr></thead>
+      <tbody id="dailyTbody"></tbody>
+    </table>
+  </div>
+
+</div><!-- /main -->
+
+<div class="footer">밀잇 DA Interactive Dashboard &nbsp;|&nbsp; GTM Skills Plugin &nbsp;|&nbsp; 데이터는 브라우저 로컬에만 저장됩니다.</div>
+
+<script>
+// ————————————————————————————————————————
+// RAW DATA
+// ————————————————————————————————————————
+const DEFAULT_DATA = [
+  {date:'2026-03-16',spend:2345053,imp:272164,clicks:2816,ctr:1.03,cpm:8616,cpc:833,cart:378,purchase:144,cartCvr:13.42,purchaseCvr:5.11,cartCpa:6204,purchaseCpa:16285,revenue:7119296,roas:304},
+  {date:'2026-03-17',spend:3203630,imp:415601,clicks:4171,ctr:1.00,cpm:7708,cpc:768,cart:328,purchase:153,cartCvr:7.86,purchaseCvr:3.67,cartCpa:9767,purchaseCpa:20939,revenue:8274170,roas:258},
+  {date:'2026-03-18',spend:3110350,imp:389944,clicks:3983,ctr:1.02,cpm:7976,cpc:781,cart:257,purchase:132,cartCvr:6.45,purchaseCvr:3.31,cartCpa:12103,purchaseCpa:23563,revenue:8643712,roas:278},
+  {date:'2026-03-19',spend:3219228,imp:353742,clicks:4164,ctr:1.18,cpm:9100,cpc:773,cart:325,purchase:109,cartCvr:7.80,purchaseCvr:2.62,cartCpa:9905,purchaseCpa:29534,revenue:6283314,roas:195},
+  {date:'2026-03-20',spend:3115162,imp:373117,clicks:4416,ctr:1.18,cpm:8349,cpc:705,cart:309,purchase:108,cartCvr:7.00,purchaseCvr:2.45,cartCpa:10081,purchaseCpa:28844,revenue:5927825,roas:190},
+  {date:'2026-03-21',spend:3166499,imp:385215,clicks:4481,ctr:1.16,cpm:8220,cpc:707,cart:270,purchase:80,cartCvr:6.03,purchaseCvr:1.79,cartCpa:11728,purchaseCpa:39581,revenue:4390842,roas:139},
+  {date:'2026-03-22',spend:3975521,imp:461769,clicks:5019,ctr:1.09,cpm:8609,cpc:792,cart:729,purchase:348,cartCvr:14.52,purchaseCvr:6.93,cartCpa:5453,purchaseCpa:11424,revenue:19589423,roas:493},
+  {date:'2026-03-23',spend:4308813,imp:731878,clicks:3031,ctr:0.41,cpm:5887,cpc:1422,cart:444,purchase:217,cartCvr:14.65,purchaseCvr:7.16,cartCpa:9705,purchaseCpa:19856,revenue:11380508,roas:264},
+  {date:'2026-03-24',spend:3402873,imp:645361,clicks:2807,ctr:0.43,cpm:5273,cpc:1212,cart:337,purchase:167,cartCvr:12.01,purchaseCvr:5.95,cartCpa:10098,purchaseCpa:20376,revenue:8875396,roas:261},
+  {date:'2026-03-25',spend:2901364,imp:661176,clicks:3693,ctr:0.56,cpm:4388,cpc:786,cart:393,purchase:223,cartCvr:10.64,purchaseCvr:6.04,cartCpa:7383,purchaseCpa:13011,revenue:11385097,roas:392},
+  {date:'2026-03-26',spend:3849884,imp:668210,clicks:4228,ctr:0.63,cpm:5761,cpc:911,cart:270,purchase:137,cartCvr:6.39,purchaseCvr:3.24,cartCpa:14259,purchaseCpa:28101,revenue:7393916,roas:192},
+  {date:'2026-03-27',spend:3168627,imp:577621,clicks:4305,ctr:0.75,cpm:5486,cpc:736,cart:224,purchase:111,cartCvr:5.20,purchaseCvr:2.58,cartCpa:14146,purchaseCpa:28546,revenue:5952854,roas:188},
+  {date:'2026-03-28',spend:4293730,imp:729090,clicks:4629,ctr:0.63,cpm:5889,cpc:928,cart:202,purchase:84,cartCvr:4.36,purchaseCvr:1.81,cartCpa:21256,purchaseCpa:51116,revenue:4918471,roas:115},
+  {date:'2026-03-29',spend:5173228,imp:819455,clicks:4925,ctr:0.60,cpm:6313,cpc:1050,cart:250,purchase:98,cartCvr:5.08,purchaseCvr:1.99,cartCpa:20693,purchaseCpa:52788,revenue:5822454,roas:113},
+  {date:'2026-03-30',spend:4664974,imp:1436414,clicks:7212,ctr:0.50,cpm:3248,cpc:647,cart:285,purchase:131,cartCvr:3.95,purchaseCvr:1.82,cartCpa:16368,purchaseCpa:35610,revenue:7541004,roas:162},
+  {date:'2026-03-31',spend:5091148,imp:1522338,clicks:7457,ctr:0.49,cpm:3344,cpc:683,cart:290,purchase:131,cartCvr:3.89,purchaseCvr:1.76,cartCpa:17556,purchaseCpa:38864,revenue:7188109,roas:141},
+  {date:'2026-04-01',spend:3135604,imp:458085,clicks:4455,ctr:0.97,cpm:6845,cpc:704,cart:312,purchase:144,cartCvr:7.00,purchaseCvr:3.23,cartCpa:10050,purchaseCpa:21775,revenue:7768233,roas:248},
+  {date:'2026-04-02',spend:3480987,imp:503695,clicks:4372,ctr:0.87,cpm:6911,cpc:796,cart:321,purchase:140,cartCvr:7.34,purchaseCvr:3.20,cartCpa:10844,purchaseCpa:24864,revenue:7574667,roas:218},
+  {date:'2026-04-03',spend:3281173,imp:517821,clicks:4156,ctr:0.80,cpm:6337,cpc:790,cart:254,purchase:120,cartCvr:6.11,purchaseCvr:2.89,cartCpa:12918,purchaseCpa:27343,revenue:5991121,roas:183},
+  {date:'2026-04-04',spend:3160868,imp:488921,clicks:4512,ctr:0.92,cpm:6465,cpc:701,cart:210,purchase:99,cartCvr:4.65,purchaseCvr:2.19,cartCpa:15052,purchaseCpa:31928,revenue:5369383,roas:170},
+  {date:'2026-04-05',spend:3738581,imp:507558,clicks:5003,ctr:0.99,cpm:7366,cpc:747,cart:304,purchase:121,cartCvr:6.08,purchaseCvr:2.42,cartCpa:12298,purchaseCpa:30897,revenue:6107722,roas:163},
+  {date:'2026-04-06',spend:3723477,imp:488610,clicks:4705,ctr:0.96,cpm:7621,cpc:791,cart:322,purchase:173,cartCvr:6.84,purchaseCvr:3.68,cartCpa:11564,purchaseCpa:21523,revenue:9111995,roas:245},
+  {date:'2026-04-07',spend:3487726,imp:429071,clicks:4533,ctr:1.06,cpm:8129,cpc:769,cart:271,purchase:148,cartCvr:5.98,purchaseCvr:3.26,cartCpa:12870,purchaseCpa:23566,revenue:8273956,roas:237},
+  {date:'2026-04-08',spend:3415587,imp:369708,clicks:4871,ctr:1.32,cpm:9239,cpc:701,cart:248,purchase:94,cartCvr:5.09,purchaseCvr:1.93,cartCpa:13773,purchaseCpa:36336,revenue:4986813,roas:146},
+  {date:'2026-04-09',spend:3371053,imp:402057,clicks:4887,ctr:1.22,cpm:8385,cpc:690,cart:253,purchase:121,cartCvr:5.18,purchaseCvr:2.48,cartCpa:13324,purchaseCpa:27860,revenue:7599480,roas:225},
+  {date:'2026-04-10',spend:3444307,imp:503435,clicks:4827,ctr:0.96,cpm:6842,cpc:714,cart:207,purchase:104,cartCvr:4.29,purchaseCvr:2.15,cartCpa:16639,purchaseCpa:33112,revenue:6667049,roas:194},
+  {date:'2026-04-11',spend:3350691,imp:447860,clicks:5074,ctr:1.13,cpm:7482,cpc:660,cart:173,purchase:90,cartCvr:3.41,purchaseCvr:1.77,cartCpa:19368,purchaseCpa:37230,revenue:5244023,roas:157},
+  {date:'2026-04-12',spend:4004734,imp:497057,clicks:5548,ctr:1.12,cpm:8057,cpc:722,cart:264,purchase:124,cartCvr:4.76,purchaseCvr:2.24,cartCpa:15169,purchaseCpa:32296,revenue:7127226,roas:178},
+  {date:'2026-04-13',spend:3976457,imp:509245,clicks:5106,ctr:1.00,cpm:7809,cpc:779,cart:252,purchase:149,cartCvr:4.94,purchaseCvr:2.92,cartCpa:15780,purchaseCpa:26688,revenue:7561443,roas:190},
+  {date:'2026-04-14',spend:3605072,imp:439771,clicks:5207,ctr:1.18,cpm:8198,cpc:692,cart:233,purchase:151,cartCvr:4.47,purchaseCvr:2.90,cartCpa:15472,purchaseCpa:23875,revenue:7616862,roas:211},
+  {date:'2026-04-15',spend:3588731,imp:430942,clicks:4734,ctr:1.10,cpm:8328,cpc:758,cart:223,purchase:131,cartCvr:4.71,purchaseCvr:2.77,cartCpa:16093,purchaseCpa:27395,revenue:7480068,roas:208},
+  {date:'2026-04-16',spend:3531359,imp:408655,clicks:4673,ctr:1.14,cpm:8641,cpc:756,cart:210,purchase:134,cartCvr:4.49,purchaseCvr:2.87,cartCpa:16816,purchaseCpa:26353,revenue:8177023,roas:232},
+  {date:'2026-04-17',spend:3508948,imp:394121,clicks:4373,ctr:1.11,cpm:8903,cpc:802,cart:195,purchase:135,cartCvr:4.46,purchaseCvr:3.09,cartCpa:17995,purchaseCpa:25992,revenue:5812349,roas:166},
+  {date:'2026-04-18',spend:3442643,imp:437447,clicks:4831,ctr:1.10,cpm:7870,cpc:713,cart:236,purchase:125,cartCvr:4.89,purchaseCvr:2.59,cartCpa:14587,purchaseCpa:27541,revenue:6196312,roas:180},
+  {date:'2026-04-19',spend:3975057,imp:461717,clicks:5025,ctr:1.09,cpm:8609,cpc:791,cart:239,purchase:133,cartCvr:4.76,purchaseCvr:2.65,cartCpa:16632,purchaseCpa:29888,revenue:7961960,roas:200},
+];
+
+const MEDIA_WEEK = [
+  {media:'Meta',spend:21387729,imp:2007780,clicks:23121,ctr:1.15,cpc:925,purchase:651,purchaseCvr:2.82,purchaseCpa:32854,revenue:36982807,roas:173,share:83,color:'#5b9bd5'},
+  {media:'GFA',spend:1008737,imp:89514,clicks:1629,ctr:1.82,cpc:619,purchase:178,purchaseCvr:10.93,purchaseCpa:5667,revenue:1653530,roas:164,share:4,color:'#03c75a'},
+  {media:'Google',spend:2595953,imp:455570,clicks:7570,ctr:1.66,cpc:343,purchase:117,purchaseCvr:1.55,purchaseCpa:22188,revenue:11411653,roas:440,share:10,color:'#ea4335'},
+  {media:'Kakao',spend:635847,imp:529034,clicks:1629,ctr:0.31,cpc:390,purchase:12,purchaseCvr:0.74,purchaseCpa:52987,revenue:758027,roas:119,share:2,color:'#c8a800'},
+];
+
+// —— STATE ——
+let allData = [...DEFAULT_DATA];
+let activeChannels = new Set(['Meta','GFA','Google','Kakao']);
+let currentView = 'daily';
+let fromDate = '', toDate = '';
+let trendChart = null, mediaRoasChart = null, mediaShareChart = null;
+
+// —— UTILS ——
+const fmtShort = n => n>=10000000?(n/10000000).toFixed(1)+'천만':n>=1000000?(n/1000000).toFixed(1)+'백만':n>=10000?(n/10000).toFixed(0)+'만':Math.round(n).toLocaleString();
+const pn = s => parseFloat(String(s||'0').replace(/[,%\s원]/g,''))||0;
+const roasCls = r => r>=300?'rh':r>=170?'rm':'rl';
+const gc = 'rgba(46,51,82,0.6)';
+Chart.defaults.color='#8a8fa8';
+Chart.defaults.font.family="'Segoe UI','Apple SD Gothic Neo',sans-serif";
+Chart.defaults.font.size=11;
+
+// —— WEEK HELPER ——
+function getWeekKey(dateStr){
+  const d=new Date(dateStr);
+  const m=d.getMonth()+1, day=d.getDate();
+  const week=Math.ceil(day/7);
+  return `${m}월${week}주`;
+}
+function weekSort(a,b){
+  const [am,aw]=a.split(/월|주/).map(x=>parseInt(x));
+  const [bm,bw]=b.split(/월|주/).map(x=>parseInt(x));
+  return am!==bm?am-bm:aw-bw;
+}
+
+// —— FILTER ——
+function getFiltered(){
+  return allData.filter(d=>{
+    if(fromDate && d.date<fromDate) return false;
+    if(toDate && d.date>toDate) return false;
+    return true;
+  }).sort((a,b)=>a.date.localeCompare(b.date));
+}
+
+// —— PRESETS ——
+function setPreset(p){
+  const today=new Date('2026-04-20');
+  let from,to;
+  if(p==='thisWeek'){
+    const dow=today.getDay()||7;
+    from=new Date(today); from.setDate(today.getDate()-dow+1); to=today;
+  } else if(p==='lastWeek'){
+    const dow=today.getDay()||7;
+    to=new Date(today); to.setDate(today.getDate()-dow);
+    from=new Date(to); from.setDate(to.getDate()-6);
+  } else if(p==='last2w'){
+    to=today; from=new Date(today); from.setDate(today.getDate()-13);
+  } else {
+    from=null; to=null;
+  }
+  fromDate=from?from.toISOString().slice(0,10):'';
+  toDate=to?to.toISOString().slice(0,10):'';
+  document.getElementById('fromDate').value=fromDate;
+  document.getElementById('toDate').value=toDate;
+  applyFilters();
+}
+
+// —— CHANNEL TOGGLE ——
+function toggleChannel(ch){
+  if(ch==='all'){
+    if(activeChannels.size===4) activeChannels.clear();
+    else activeChannels=new Set(['Meta','GFA','Google','Kakao']);
+  } else {
+    if(activeChannels.has(ch)) activeChannels.delete(ch);
+    else activeChannels.add(ch);
+  }
+  ['Meta','GFA','Google','Kakao'].forEach(c=>{
+    const el=document.getElementById('chip-'+c);
+    if(el) el.classList.toggle('on',activeChannels.has(c));
+  });
+  document.getElementById('chip-all').classList.toggle('on',activeChannels.size===4);
+  applyFilters();
+}
+
+// —— VIEW TOGGLE ——
+function setView(v){
+  currentView=v;
+  document.getElementById('viewDaily').classList.toggle('active',v==='daily');
+  document.getElementById('viewWeekly').classList.toggle('active',v==='weekly');
+  applyFilters();
+}
+
+// —— APPLY FILTERS ——
+function applyFilters(){
+  fromDate=document.getElementById('fromDate').value;
+  toDate=document.getElementById('toDate').value;
+  const data=getFiltered();
+  updateKPIs(data);
+  updateTrendChart(data);
+  updateDailyTable(data);
+  updateMediaCharts();
+  updateManageTable();
+  document.getElementById('rowCountBadge').textContent=allData.length+'건';
+  document.getElementById('lastUpdate').textContent='업데이트: '+new Date().toLocaleTimeString('ko-KR');
+}
+
+// —— KPIs ——
+function updateKPIs(data){
+  if(!data.length){
+    ['spend','revenue','purchase','ctr','cpc','roas','cpa','cvr'].forEach(k=>document.getElementById('k-'+k).textContent='—');
+    return;
+  }
+  const totSpend=data.reduce((s,d)=>s+d.spend,0);
+  const totRev=data.reduce((s,d)=>s+d.revenue,0);
+  const totPurch=data.reduce((s,d)=>s+d.purchase,0);
+  const totClicks=data.reduce((s,d)=>s+d.clicks,0);
+  const totCart=data.reduce((s,d)=>s+d.cart,0);
+  const avgCtr=data.reduce((s,d)=>s+d.ctr,0)/data.length;
+  const avgCpc=totSpend/totClicks;
+  const roas=totSpend?Math.round(totRev/totSpend*100):0;
+  const cpa=totPurch?Math.round(totSpend/totPurch):0;
+  const cvr=totClicks?totPurch/totClicks*100:0;
+
+  document.getElementById('kpiPeriodBadge').textContent=
+    fromDate&&toDate?fromDate.slice(5)+' ~ '+toDate.slice(5):data.length+'일 기준';
+
+  document.getElementById('k-spend').textContent=fmtShort(totSpend)+'원';
+  document.getElementById('k-spend-sub').textContent=totSpend.toLocaleString()+'원';
+  document.getElementById('k-revenue').textContent=fmtShort(totRev)+'원';
+  document.getElementById('k-revenue-sub').textContent=totRev.toLocaleString()+'원';
+  document.getElementById('k-roas').textContent=roas+'%';
+  document.getElementById('k-roas-sub').textContent='매출/광고비 비율';
+  document.getElementById('k-purchase').textContent=totPurch.toLocaleString()+'건';
+  document.getElementById('k-purchase-sub').textContent='장바구니 '+totCart.toLocaleString()+'건';
+  document.getElementById('k-ctr').textContent=avgCtr.toFixed(2)+'%';
+  document.getElementById('k-ctr-sub').textContent='평균 클릭률';
+  document.getElementById('k-cpc').textContent=Math.round(avgCpc).toLocaleString()+'원';
+  document.getElementById('k-cpc-sub').textContent='클릭당 비용';
+  document.getElementById('k-cpa').textContent=cpa.toLocaleString()+'원';
+  document.getElementById('k-cpa-sub').textContent='구매당 광고비';
+  document.getElementById('k-cvr').textContent=cvr.toFixed(2)+'%';
+  document.getElementById('k-cvr-sub').textContent='클릭→구매 전환율';
+}
+
+// —— TREND CHART ——
+function updateTrendChart(data){
+  const metric=document.getElementById('metricSelect').value;
+  const metricLabels={
+    roas:'ROAS (%)',revenue:'매출 (원)',spend:'광고비용 (원)',
+    purchase:'구매 (건)',ctr:'CTR (%)',cpc:'CPC (원)',
+    purchaseCvr:'구매CVR (%)',purchaseCpa:'구매CPA (원)'
+  };
+  const isPercent=['roas','ctr','purchaseCvr'].includes(metric);
+  let labels,values,spend2;
+
+  if(currentView==='weekly'){
+    const byWeek={};
+    data.forEach(d=>{
+      const wk=getWeekKey(d.date);
+      if(!byWeek[wk]) byWeek[wk]={spend:0,revenue:0,purchase:0,ctr:[],cpc:[],purchaseCvr:[],purchaseCpa:[],clicks:0};
+      byWeek[wk].spend+=d.spend; byWeek[wk].revenue+=d.revenue;
+      byWeek[wk].purchase+=d.purchase; byWeek[wk].clicks+=d.clicks;
+      byWeek[wk].ctr.push(d.ctr); byWeek[wk].cpc.push(d.cpc);
+      byWeek[wk].purchaseCvr.push(d.purchaseCvr); byWeek[wk].purchaseCpa.push(d.purchaseCpa);
+    });
+    const weeks=Object.keys(byWeek).sort(weekSort);
+    labels=weeks;
+    values=weeks.map(w=>{
+      const b=byWeek[w];
+      if(metric==='roas') return b.spend?Math.round(b.revenue/b.spend*100):0;
+      if(metric==='revenue') return b.revenue;
+      if(metric==='spend') return b.spend;
+      if(metric==='purchase') return b.purchase;
+      if(metric==='ctr') return b.ctr.reduce((s,v)=>s+v,0)/b.ctr.length;
+      if(metric==='cpc') return b.clicks?b.spend/b.clicks:0;
+      if(metric==='purchaseCvr') return b.purchaseCvr.reduce((s,v)=>s+v,0)/b.purchaseCvr.length;
+      if(metric==='purchaseCpa') return b.purchase?b.spend/b.purchase:0;
+      return 0;
+    });
+    spend2=weeks.map(w=>Math.round(byWeek[w].spend/10000));
+    document.getElementById('trendSubtitle').textContent='주차별';
+  } else {
+    labels=data.map(d=>d.date.slice(5));
+    values=data.map(d=>d[metric]||0);
+    spend2=data.map(d=>Math.round(d.spend/10000));
+    document.getElementById('trendSubtitle').textContent='일별 ('+data.length+'일)';
+  }
+  document.getElementById('dailyBadge').textContent=data.length+'일';
+
+  if(trendChart) trendChart.destroy();
+  trendChart=new Chart(document.getElementById('trendChart'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {
+          type:'line',label:metricLabels[metric],data:values,
+          borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.12)',
+          tension:.4,pointRadius:data.length>60?0:3,fill:true,yAxisID:'y2',order:1,borderWidth:2,
+        },
+        {
+          type:'bar',label:'광고비 (만원)',data:spend2,
+          backgroundColor:'rgba(0,212,170,.3)',borderRadius:3,yAxisID:'y',order:2,
+        }
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#8a8fa8',boxWidth:12,padding:12}},
+        tooltip:{callbacks:{
+          label:ctx=>ctx.dataset.label.includes('만원')?` 광고비 ${ctx.raw}만원`:` ${metricLabels[metric]} ${isPercent?Number(ctx.raw).toFixed(2)+'%':Number(ctx.raw).toLocaleString()}`
+        }}
+      },
+      scales:{
+        x:{grid:{color:gc},ticks:{color:'#8a8fa8',maxTicksLimit:data.length>30?15:data.length}},
+        y:{grid:{color:gc},ticks:{color:'#00d4aa',callback:v=>v+'만'},position:'left'},
+        y2:{grid:{display:false},ticks:{color:'#6c63ff',callback:v=>isPercent?v+'%':v.toLocaleString()},position:'right'}
+      }
+    }
+  });
+}
+
+// —— MEDIA CHARTS ——
+function updateMediaCharts(){
+  const filtered=MEDIA_WEEK.filter(m=>activeChannels.has(m.media));
+
+  if(mediaRoasChart) mediaRoasChart.destroy();
+  mediaRoasChart=new Chart(document.getElementById('mediaRoasChart'),{
+    type:'bar',
+    data:{
+      labels:filtered.map(m=>m.media),
+      datasets:[{
+        label:'ROAS (%)',data:filtered.map(m=>m.roas),
+        backgroundColor:filtered.map(m=>m.color),borderRadius:6,borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw}%`}}},
+      scales:{
+        x:{grid:{color:gc},ticks:{color:'#8a8fa8'}},
+        y:{grid:{color:gc},ticks:{color:'#8a8fa8',callback:v=>v+'%'},beginAtZero:true}
+      }
+    }
+  });
+
+  if(mediaShareChart) mediaShareChart.destroy();
+  mediaShareChart=new Chart(document.getElementById('mediaShareChart'),{
+    type:'doughnut',
+    data:{
+      labels:filtered.map(m=>m.media+' ('+m.share+'%)'),
+      datasets:[{data:filtered.map(m=>m.share),backgroundColor:filtered.map(m=>m.color),borderWidth:0,hoverOffset:8}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'right',labels:{color:'#8a8fa8',boxWidth:10,padding:10}}}
+    }
+  });
+
+  const tb=document.getElementById('mediaTbody');
+  tb.innerHTML='';
+  filtered.forEach(m=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:${m.color}">${m.media}</td>
+      <td>${m.spend.toLocaleString()}</td><td>${m.imp.toLocaleString()}</td>
+      <td>${m.clicks.toLocaleString()}</td><td>${m.ctr}%</td><td>${m.cpc.toLocaleString()}</td>
+      <td>${m.purchase.toLocaleString()}</td><td>${m.purchaseCvr}%</td>
+      <td>${m.purchaseCpa.toLocaleString()}</td><td>${m.revenue.toLocaleString()}</td>
+      <td class="${roasCls(m.roas)}">${m.roas}%</td><td>${m.share}%</td>
+    `;
+    tb.appendChild(tr);
+  });
+  if(filtered.length){
+    const tot={spend:0,imp:0,clicks:0,purchase:0,revenue:0};
+    filtered.forEach(m=>{tot.spend+=m.spend;tot.imp+=m.imp;tot.clicks+=m.clicks;tot.purchase+=m.purchase;tot.revenue+=m.revenue;});
+    const totRoas=Math.round(tot.revenue/tot.spend*100);
+    const tr=document.createElement('tr');tr.className='total';
+    tr.innerHTML=`<td>합계</td><td>${tot.spend.toLocaleString()}</td><td>${tot.imp.toLocaleString()}</td><td>${tot.clicks.toLocaleString()}</td><td>—</td><td>—</td><td>${tot.purchase.toLocaleString()}</td><td>—</td><td>—</td><td>${tot.revenue.toLocaleString()}</td><td class="${roasCls(totRoas)}">${totRoas}%</td><td>100%</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+// —— DAILY TABLE ——
+function updateDailyTable(data){
+  const tb=document.getElementById('dailyTbody');
+  tb.innerHTML='';
+  data.forEach(d=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${d.date}</td><td>${d.spend.toLocaleString()}</td><td>${d.imp.toLocaleString()}</td>
+      <td>${d.clicks.toLocaleString()}</td><td>${d.ctr.toFixed(2)}%</td><td>${d.cpc.toLocaleString()}</td>
+      <td>${d.purchase.toLocaleString()}</td><td>${d.purchaseCvr.toFixed(2)}%</td>
+      <td>${d.purchaseCpa.toLocaleString()}</td><td>${d.revenue.toLocaleString()}</td>
+      <td class="${roasCls(d.roas)}">${d.roas}%</td>
+    `;
+    tb.appendChild(tr);
+  });
+}
+
+// —— DATA INPUT ——
+function toggleDataPanel(){
+  const p=document.getElementById('dataPanel');
+  p.style.display=p.style.display==='none'?'block':'none';
+  if(p.style.display==='block') updateManageTable();
+}
+function toggleDataBody(){
+  document.getElementById('dataPanelBody').classList.toggle('open');
+  document.getElementById('dataPanelHdr').classList.toggle('open');
+}
+function switchTab(t){
+  document.querySelectorAll('.data-tab').forEach((el,i)=>{
+    el.classList.toggle('active',['paste','form','manage'][i]===t);
+  });
+  document.querySelectorAll('.data-section').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='manage') updateManageTable();
+}
+
+function parsePaste(){
+  const raw=document.getElementById('csvInput').value.trim();
+  if(!raw){setStatus('pasteStatus','내용을 입력하세요.','#ff6b6b');return;}
+  const lines=raw.split('\n').filter(l=>l.trim());
+  let added=0,skipped=0;
+  lines.forEach(line=>{
+    const cols=line.split(/\t|,/).map(c=>c.trim());
+    if(cols.length<2) return;
+    const dateVal=cols[0];
+    if(!/^\d{4}-\d{2}-\d{2}/.test(dateVal)&&!/^\d{4}.\d{2}.\d{2}/.test(dateVal)){skipped++;return;}
+    const date=dateVal.replace(/[./]/g,'-').slice(0,10);
+    const existing=allData.findIndex(d=>d.date===date);
+    const row={
+      date,spend:pn(cols[1]),imp:pn(cols[2]),clicks:pn(cols[3]),
+      ctr:pn(cols[4]),cpm:pn(cols[5]),cpc:pn(cols[6]),
+      cart:pn(cols[7]),purchase:pn(cols[8]),
+      cartCvr:pn(cols[9]),purchaseCvr:pn(cols[10]),
+      cartCpa:pn(cols[11]),purchaseCpa:pn(cols[12]),
+      revenue:pn(cols[13]),roas:pn(cols[14])
+    };
+    if(row.roas===0&&row.spend>0&&row.revenue>0) row.roas=Math.round(row.revenue/row.spend*100);
+    if(existing>=0) allData[existing]=row; else allData.push(row);
+    added++;
+  });
+  allData.sort((a,b)=>a.date.localeCompare(b.date));
+  setStatus('pasteStatus',`✅ ${added}건 추가/업데이트 ${skipped?'('+skipped+'건 건너뜀)':''}`, '#00d4aa');
+  document.getElementById('csvInput').value='';
+  applyFilters();
+}
+
+function addFormRow(){
+  const date=document.getElementById('f-date').value;
+  if(!date){setStatus('formStatus','날짜를 입력하세요.','#ff6b6b');return;}
+  const row={
+    date,
+    spend:pn(document.getElementById('f-spend').value),
+    imp:pn(document.getElementById('f-imp').value),
+    clicks:pn(document.getElementById('f-click').value),
+    ctr:pn(document.getElementById('f-ctr').value),
+    cpm:pn(document.getElementById('f-cpm').value),
+    cpc:pn(document.getElementById('f-cpc').value),
+    cart:pn(document.getElementById('f-cart').value),
+    purchase:pn(document.getElementById('f-purchase').value),
+    cartCvr:pn(document.getElementById('f-cartCvr').value),
+    purchaseCvr:pn(document.getElementById('f-purchaseCvr').value),
+    cartCpa:pn(document.getElementById('f-cartCpa').value),
+    purchaseCpa:pn(document.getElementById('f-purchaseCpa').value),
+    revenue:pn(document.getElementById('f-revenue').value),
+    roas:pn(document.getElementById('f-roas').value),
+  };
+  if(row.roas===0&&row.spend&&row.revenue) row.roas=Math.round(row.revenue/row.spend*100);
+  const existing=allData.findIndex(d=>d.date===date);
+  if(existing>=0) allData[existing]=row; else allData.push(row);
+  allData.sort((a,b)=>a.date.localeCompare(b.date));
+  setStatus('formStatus','✅ 추가 완료: '+date,'#00d4aa');
+  applyFilters();
+}
+
+function updateManageTable(){
+  const tb=document.getElementById('manageTbody');
+  tb.innerHTML='';
+  [...allData].sort((a,b)=>b.date.localeCompare(a.date)).forEach(d=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${d.date}</td><td>${(d.spend/10000).toFixed(0)}만</td>
+      <td>${(d.revenue/10000).toFixed(0)}만</td>
+      <td class="${roasCls(d.roas)}">${d.roas}%</td>
+      <td>${d.purchase}</td><td>${d.ctr.toFixed(2)}%</td>
+      <td style="text-align:center"><button class="btn btn-danger" style="padding:3px 8px;font-size:11px" onclick="deleteRow('${d.date}')">삭제</button></td>
+    `;
+    tb.appendChild(tr);
+  });
+  document.getElementById('rowCountBadge').textContent=allData.length+'건';
+}
+
+function deleteRow(date){
+  allData=allData.filter(d=>d.date!==date);
+  setStatus('manageStatus','삭제: '+date,'#ff6b6b');
+  applyFilters();
+}
+
+function clearAllData(){
+  if(confirm('모든 데이터를 기본값으로 초기화하시겠습니까?')){
+    allData=[...DEFAULT_DATA];
+    setStatus('pasteStatus','초기화 완료','#00d4aa');
+    setStatus('manageStatus','초기화 완료','#00d4aa');
+    applyFilters();
+  }
+}
+
+function setStatus(id,msg,color){
+  const el=document.getElementById(id);
+  el.textContent=msg; el.style.color=color;
+  setTimeout(()=>{if(el.textContent===msg)el.textContent='';},4000);
+}
+
+// —— EXPORT CSV ——
+function exportCSV(){
+  const data=getFiltered();
+  const hdr='날짜,광고비용,노출,클릭,CTR,CPM,CPC,장바구니,구매,장바구니CVR,구매CVR,장바구니CPA,구매CPA,매출,ROAS';
+  const rows=data.map(d=>[d.date,d.spend,d.imp,d.clicks,d.ctr,d.cpm,d.cpc,d.cart,d.purchase,d.cartCvr,d.purchaseCvr,d.cartCpa,d.purchaseCpa,d.revenue,d.roas].join(','));
+  const blob=new Blob([[hdr,...rows].join('\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='mileat_da_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// —— INIT ——
+document.getElementById('fromDate').value='';
+document.getElementById('toDate').value='';
+applyFilters();
+document.getElementById('lastUpdate').textContent='로드 완료';
+</script>
+</body>
+</html>
