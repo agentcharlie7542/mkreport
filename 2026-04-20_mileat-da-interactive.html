@@ -253,7 +253,7 @@ textarea:focus{outline:none;border-color:var(--accent);}
 .modal-field input:focus,.modal-field textarea:focus{outline:none;border-color:var(--accent);}
 .modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
 
-/* 차트 위 별표 뱃지 */
+/* 차트 위 뱃지 */
 .chart-star-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;min-height:24px;}
 .chart-star{
   display:inline-flex;align-items:center;gap:4px;
@@ -263,6 +263,14 @@ textarea:focus{outline:none;border-color:var(--accent);}
 }
 .chart-star:hover{background:rgba(255,217,61,.22);}
 .chart-star .star-icon{font-size:12px;}
+.chart-warn{
+  display:inline-flex;align-items:center;gap:4px;
+  background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.4);
+  border-radius:20px;padding:3px 10px;font-size:11px;color:var(--a3);
+  cursor:pointer;transition:all .15s;
+}
+.chart-warn:hover{background:rgba(255,107,107,.22);}
+.chart-warn .warn-icon{font-size:12px;}
 
 /* —— FOOTER —— */
 .footer{text-align:center;color:var(--muted);font-size:11px;padding:20px;border-top:1px solid var(--border);margin-top:8px;}
@@ -478,7 +486,7 @@ textarea:focus{outline:none;border-color:var(--accent);}
     <div class="chart-card">
       <div class="chart-card-hdr">
         <h3>일/주차별 성과 <small id="trendSubtitle">전체 기간</small></h3>
-        <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openEventModal(null)">+ 이슈 등록</button>
+        <button class="btn" style="font-size:11px;padding:4px 10px;" onclick="openEventModal('high',null)">+ 이슈 등록</button>
       </div>
       <!-- ROAS 350%+ 날짜 뱃지 -->
       <div class="chart-star-row" id="starBadgeRow"></div>
@@ -491,6 +499,13 @@ textarea:focus{outline:none;border-color:var(--accent);}
   <div class="highlight-panel" id="highlightPanel" style="display:none;">
     <h3>🏆 고성과 이슈 <span class="mbadge" id="highlightCount">0건</span></h3>
     <div class="highlight-list" id="highlightList"></div>
+  </div>
+
+  <!-- 고비용 저효율 경고 -->
+  <div class="sec-title" id="warnSection" style="display:none;">⚠️ 고비용 저효율 경고</div>
+  <div class="highlight-panel" id="warnPanel" style="display:none;">
+    <h3>⚠️ 비용 초과 · 효율 저하 <span class="mbadge" style="background:rgba(255,107,107,.2);color:var(--a3);" id="warnCount">0건</span></h3>
+    <div class="highlight-list" id="warnList"></div>
   </div>
 
   <!-- 이벤트 편집 모달 -->
@@ -619,6 +634,7 @@ const MEDIA_WEEK = [
 
 // —— HIGH ROAS EVENTS ——
 const HIGH_ROAS_THRESHOLD = 350;
+const WARN_ROAS_RATIO = 0.85;   // 평균 ROAS의 85% 미만
 
 let roasEvents = {
   '2026-03-22': {
@@ -628,6 +644,33 @@ let roasEvents = {
   '2026-03-25': {
     title: '재구매 타겟 리마케팅 집중 집행',
     desc: '기존 구매자 대상 리타겟팅 캠페인 예산 집중 (일예산 +40%). 구매CVR 6.04%, 구매 223건. CPC 786원으로 효율적 유입 달성.'
+  }
+};
+
+let warnEvents = {
+  '2026-03-28': {
+    title: '3월 말 성수기 예산 집행 · 전환율 급락',
+    desc: '일예산 429만원 집행 (+19% 초과)에도 ROAS 115%. 3/22 이후 소재 피로도 누적 추정. 핵심 소재 교체 및 오디언스 리프레시 필요.'
+  },
+  '2026-03-29': {
+    title: '최고 비용 집행일 · 최저 효율 기록',
+    desc: '일예산 517만원으로 기간 내 최고 지출. ROAS 113%로 광고비 회수 실패. 신규 소재 테스트 중 성과 불안정 구간 진입.'
+  },
+  '2026-03-30': {
+    title: '예산 초과 지속 · ROAS 회복 부진',
+    desc: '3일 연속 고비용 집행 (466만원). ROAS 162%로 일부 회복세나 평균 하회. 소재 최적화 미완료 상태.'
+  },
+  '2026-03-31': {
+    title: '월말 예산 소진 · 효율 미회복',
+    desc: '509만원 집행으로 월말 예산 집중 소진. ROAS 141%. 4월 소재 교체 및 캠페인 구조 개편 계기가 된 날.'
+  },
+  '2026-04-05': {
+    title: '주말 전 예산 확대 · 기대 이하 성과',
+    desc: '374만원 집행 (평균 +4%). ROAS 163%로 저조. 주말 효과 기대 대비 구매 121건에 그침. 크리에이티브 메시지 점검 필요.'
+  },
+  '2026-04-12': {
+    title: '주간 마감 예산 소화 · ROAS 178%',
+    desc: '400만원 집행. 4월 2주차 종료일로 일예산 소진 집행. 구매 124건, ROAS 178%로 비용 대비 성과 미흡. 다음 주 예산 배분 재조정.'
   }
 };
 
@@ -814,53 +857,56 @@ function updateTrendChart(data){
   }
   document.getElementById('dailyBadge').textContent=data.length+'일';
 
-  // ROAS 350%+ 날짜 인덱스 (일별 뷰만)
-  const highRoasDates = currentView==='daily'
-    ? data.map((d,i)=>d.roas>=HIGH_ROAS_THRESHOLD?i:-1).filter(i=>i>=1)
-    : [];
+  // 평균 계산 (경고 기준)
+  const avgSpend = data.reduce((s,d)=>s+d.spend,0)/data.length;
+  const avgRoas  = data.reduce((s,d)=>s+d.roas,0)/data.length;
+  const isWarnDay = d => d.spend > avgSpend && d.roas < avgRoas * WARN_ROAS_RATIO;
+  const isHighDay = d => d.roas >= HIGH_ROAS_THRESHOLD;
 
-  // 포인트 색상 — 350%+ 날은 금색 별 강조
+  // 포인트 색상 — 고성과 금색 / 경고 빨강 / 기본 보라
   const pointColors = currentView==='daily'
-    ? data.map(d => d.roas>=HIGH_ROAS_THRESHOLD ? '#ffd93d' : '#6c63ff')
+    ? data.map(d => isHighDay(d) ? '#ffd93d' : isWarnDay(d) ? '#ff6b6b' : '#6c63ff')
     : labels.map(()=>'#6c63ff');
   const pointRadii = currentView==='daily'
-    ? data.map(d => d.roas>=HIGH_ROAS_THRESHOLD ? 7 : (data.length>60?0:3))
+    ? data.map(d => (isHighDay(d)||isWarnDay(d)) ? 7 : (data.length>60?0:3))
     : labels.map(()=>3);
 
   if(trendChart) trendChart.destroy();
 
-  // 커스텀 afterDraw 플러그인 — 350%+ 날 수직선 + 라벨
+  // 커스텀 afterDraw 플러그인 — 고성과(★) + 경고(⚠) 수직선 + 라벨
   const annotationPlugin = {
     id:'highRoasAnnotation',
     afterDraw(chart){
       if(currentView!=='daily') return;
       const ctx2=chart.ctx;
       const xScale=chart.scales.x;
-      const yScale=chart.scales.y2||chart.scales.y;
       const chartArea=chart.chartArea;
       data.forEach((d,i)=>{
-        if(d.roas < HIGH_ROAS_THRESHOLD) return;
+        const high=isHighDay(d), warn=isWarnDay(d);
+        if(!high && !warn) return;
         const x=xScale.getPixelForValue(i);
-        const ev=roasEvents[d.date];
+        const lineColor=high?'rgba(255,217,61,0.4)':'rgba(255,107,107,0.4)';
+        const labelColor=high?'#ffd93d':'#ff6b6b';
+        const icon=high?'★ ':'⚠ ';
+        const ev=high?roasEvents[d.date]:warnEvents[d.date];
         // 수직 점선
         ctx2.save();
         ctx2.setLineDash([4,4]);
-        ctx2.strokeStyle='rgba(255,217,61,0.4)';
+        ctx2.strokeStyle=lineColor;
         ctx2.lineWidth=1.5;
         ctx2.beginPath();
         ctx2.moveTo(x,chartArea.top);
         ctx2.lineTo(x,chartArea.bottom);
         ctx2.stroke();
         ctx2.restore();
-        // 상단 별 + ROAS 텍스트
+        // 상단 아이콘 + ROAS
         ctx2.save();
-        ctx2.fillStyle='#ffd93d';
+        ctx2.fillStyle=labelColor;
         ctx2.font='bold 11px Segoe UI';
         ctx2.textAlign='center';
-        ctx2.fillText('★ '+d.roas+'%', x, chartArea.top-6);
-        // 이슈 제목 있으면 표시
+        ctx2.fillText(icon+d.roas+'%', x, chartArea.top-6);
         if(ev){
-          ctx2.fillStyle='rgba(255,217,61,0.8)';
+          ctx2.fillStyle=high?'rgba(255,217,61,0.75)':'rgba(255,107,107,0.75)';
           ctx2.font='10px Segoe UI';
           const shortTitle=ev.title.length>14?ev.title.slice(0,14)+'…':ev.title;
           ctx2.fillText(shortTitle, x, chartArea.top+14);
@@ -889,7 +935,7 @@ function updateTrendChart(data){
         {
           type:'bar',label:'광고비 (만원)',data:spend2,
           backgroundColor: currentView==='daily'
-            ? data.map(d=>d.roas>=HIGH_ROAS_THRESHOLD?'rgba(255,217,61,.35)':'rgba(0,212,170,.3)')
+            ? data.map(d=>isHighDay(d)?'rgba(255,217,61,.35)':isWarnDay(d)?'rgba(255,107,107,.3)':'rgba(0,212,170,.3)')
             : labels.map(()=>'rgba(0,212,170,.3)'),
           borderRadius:3,yAxisID:'y',order:2,
         }
@@ -905,17 +951,19 @@ function updateTrendChart(data){
           title: ctx=>{
             const label=ctx[0].label;
             if(currentView==='daily'){
-              const fullDate = data[ctx[0].dataIndex]?.date;
-              const ev=fullDate&&roasEvents[fullDate];
-              if(ev) return label+' ⭐ '+ev.title;
+              const d=data[ctx[0].dataIndex];
+              if(!d) return label;
+              if(isHighDay(d)&&roasEvents[d.date]) return label+' ⭐ '+roasEvents[d.date].title;
+              if(isWarnDay(d)&&warnEvents[d.date])  return label+' ⚠️ '+warnEvents[d.date].title;
             }
             return label;
           },
           label:ctx=>ctx.dataset.label.includes('만원')?` 광고비 ${ctx.raw}만원`:` ${metricLabels[metric]} ${isPercent?Number(ctx.raw).toFixed(2)+'%':Number(ctx.raw).toLocaleString()}`,
           afterBody: ctx=>{
             if(currentView!=='daily') return;
-            const fullDate=data[ctx[0].dataIndex]?.date;
-            const ev=fullDate&&roasEvents[fullDate];
+            const d=data[ctx[0].dataIndex];
+            if(!d) return;
+            const ev=isHighDay(d)?roasEvents[d.date]:isWarnDay(d)?warnEvents[d.date]:null;
             if(ev) return ['','📌 '+ev.desc.slice(0,60)+(ev.desc.length>60?'…':'')];
           }
         }}
@@ -933,68 +981,113 @@ function updateTrendChart(data){
   renderHighlightPanel(data);
 }
 
-// —— STAR BADGES (차트 위) ——
+// —— STAR + WARN BADGES (차트 위) ——
 function renderStarBadges(data){
   const row=document.getElementById('starBadgeRow');
   row.innerHTML='';
   if(currentView!=='daily') return;
-  data.filter(d=>d.roas>=HIGH_ROAS_THRESHOLD).forEach(d=>{
+  const avgSpend=data.reduce((s,d)=>s+d.spend,0)/data.length;
+  const avgRoas=data.reduce((s,d)=>s+d.roas,0)/data.length;
+  // 고성과 뱃지
+  data.filter(d=>isHighDay(d)).forEach(d=>{
     const ev=roasEvents[d.date];
     const badge=document.createElement('div');
     badge.className='chart-star';
-    badge.innerHTML=`<span class="star-icon">⭐</span>${d.date.slice(5)} ROAS ${d.roas}%${ev?' · '+ev.title.slice(0,16)+(ev.title.length>16?'…':''):''}`;
-    badge.onclick=()=>openEventModal(d.date);
+    badge.innerHTML=`<span class="star-icon">⭐</span>${d.date.slice(5)} ${d.roas}%${ev?' · '+ev.title.slice(0,14)+(ev.title.length>14?'…':''):''}`;
+    badge.onclick=()=>openEventModal('high',d.date);
+    row.appendChild(badge);
+  });
+  // 경고 뱃지
+  data.filter(d=>isWarnDay(d)).forEach(d=>{
+    const ev=warnEvents[d.date];
+    const badge=document.createElement('div');
+    badge.className='chart-warn';
+    badge.innerHTML=`<span class="warn-icon">⚠️</span>${d.date.slice(5)} ${d.roas}%${ev?' · '+ev.title.slice(0,14)+(ev.title.length>14?'…':''):''}`;
+    badge.onclick=()=>openEventModal('warn',d.date);
     row.appendChild(badge);
   });
 }
 
-// —— HIGHLIGHT PANEL ——
+// —— HIGHLIGHT PANEL (고성과) ——
 function renderHighlightPanel(data){
-  const highDays = data.filter(d=>d.roas>=HIGH_ROAS_THRESHOLD)
-    .sort((a,b)=>b.roas-a.roas);
+  const highDays=data.filter(d=>isHighDay(d)).sort((a,b)=>b.roas-a.roas);
   const panel=document.getElementById('highlightPanel');
   const section=document.getElementById('highlightSection');
   const list=document.getElementById('highlightList');
-  const count=document.getElementById('highlightCount');
-
-  if(!highDays.length){
-    panel.style.display='none'; section.style.display='none'; return;
+  document.getElementById('highlightCount').textContent=highDays.length+'건';
+  if(!highDays.length){ panel.style.display='none'; section.style.display='none'; }
+  else {
+    panel.style.display='block'; section.style.display='flex';
+    list.innerHTML='';
+    highDays.forEach(d=>{
+      const ev=roasEvents[d.date];
+      const item=document.createElement('div');
+      item.className='highlight-item editable';
+      item.innerHTML=`
+        <div class="hi-date">${d.date.slice(5)}</div>
+        <div class="hi-roas">${d.roas}%<small>ROAS</small></div>
+        <div class="hi-body">
+          <div class="hi-title">${ev?ev.title:'<span style="color:var(--muted);font-weight:400">이슈를 등록하세요</span>'}</div>
+          <div class="hi-desc">${ev?ev.desc:'구매 '+d.purchase+'건 · 매출 '+(d.revenue/10000).toFixed(0)+'만원 · CTR '+d.ctr.toFixed(2)+'%'}</div>
+        </div>
+        <button class="hi-edit-btn" onclick="event.stopPropagation();openEventModal('high','${d.date}')">${ev?'수정':'+ 등록'}</button>
+      `;
+      item.onclick=()=>openEventModal('high',d.date);
+      list.appendChild(item);
+    });
   }
-  panel.style.display='block'; section.style.display='flex';
-  count.textContent=highDays.length+'건';
-  list.innerHTML='';
-  highDays.forEach(d=>{
-    const ev=roasEvents[d.date];
-    const item=document.createElement('div');
-    item.className='highlight-item editable';
-    item.innerHTML=`
-      <div class="hi-date">${d.date.slice(5)}</div>
-      <div class="hi-roas">${d.roas}%<small>ROAS</small></div>
-      <div class="hi-body">
-        <div class="hi-title">${ev?ev.title:'<span style="color:var(--muted);font-weight:400">이슈를 등록하세요</span>'}</div>
-        <div class="hi-desc">${ev?ev.desc:'구매 '+d.purchase+'건 · 매출 '+(d.revenue/10000).toFixed(0)+'만원 · CTR '+d.ctr.toFixed(2)+'% · 구매CVR '+d.purchaseCvr.toFixed(2)+'%'}</div>
-      </div>
-      <button class="hi-edit-btn" onclick="event.stopPropagation();openEventModal('${d.date}')">${ev?'수정':'+ 등록'}</button>
-    `;
-    item.onclick=()=>openEventModal(d.date);
-    list.appendChild(item);
-  });
+
+  // —— 경고 패널 ——
+  const avgSpend=data.reduce((s,d)=>s+d.spend,0)/data.length;
+  const avgRoas=data.reduce((s,d)=>s+d.roas,0)/data.length;
+  const warnDays=data.filter(d=>isWarnDay(d)).sort((a,b)=>a.roas-b.roas);
+  const warnPanel=document.getElementById('warnPanel');
+  const warnSection=document.getElementById('warnSection');
+  const warnList=document.getElementById('warnList');
+  document.getElementById('warnCount').textContent=warnDays.length+'건';
+  if(!warnDays.length){ warnPanel.style.display='none'; warnSection.style.display='none'; }
+  else {
+    warnPanel.style.display='block'; warnSection.style.display='flex';
+    warnList.innerHTML='';
+    warnDays.forEach(d=>{
+      const ev=warnEvents[d.date];
+      const overSpend=((d.spend/avgSpend-1)*100).toFixed(0);
+      const item=document.createElement('div');
+      item.className='highlight-item editable';
+      item.style.borderLeftColor='var(--a3)';
+      item.innerHTML=`
+        <div class="hi-date">${d.date.slice(5)}</div>
+        <div class="hi-roas" style="color:var(--a3)">${d.roas}%<small>ROAS</small></div>
+        <div class="hi-body">
+          <div class="hi-title" style="color:var(--a3)">${ev?ev.title:'<span style="color:var(--muted);font-weight:400">이슈를 등록하세요</span>'}</div>
+          <div class="hi-desc">${ev?ev.desc:'비용 '+(d.spend/10000).toFixed(0)+'만원 (평균 대비 +'+overSpend+'%) · 구매 '+d.purchase+'건 · CVR '+d.purchaseCvr.toFixed(2)+'%'}</div>
+        </div>
+        <button class="hi-edit-btn" onclick="event.stopPropagation();openEventModal('warn','${d.date}')">${ev?'수정':'+ 등록'}</button>
+      `;
+      item.onclick=()=>openEventModal('warn',d.date);
+      warnList.appendChild(item);
+    });
+  }
 }
 
 // —— EVENT MODAL ——
-function openEventModal(date){
+let modalType='high';
+function openEventModal(type, date){
+  modalType=type||'high';
   const modal=document.getElementById('eventModal');
   const deleteBtn=document.getElementById('modalDeleteBtn');
+  const store=modalType==='warn'?warnEvents:roasEvents;
+  const typeLabel=modalType==='warn'?'⚠️ 경고 이슈':'⭐ 고성과 이슈';
   document.getElementById('modalDateInput').value=date||new Date().toISOString().slice(0,10);
   if(date){
-    document.getElementById('modalTitle').textContent='이슈 수정 — '+date;
-    const ev=roasEvents[date]||{title:'',desc:''};
+    document.getElementById('modalTitle').textContent=typeLabel+' 수정 — '+date;
+    const ev=store[date]||{title:'',desc:''};
     document.getElementById('modalEventTitle').value=ev.title;
     document.getElementById('modalEventDesc').value=ev.desc;
     document.getElementById('modalDate').value=date;
-    deleteBtn.style.display=roasEvents[date]?'inline-block':'none';
+    deleteBtn.style.display=store[date]?'inline-block':'none';
   } else {
-    document.getElementById('modalTitle').textContent='이슈 신규 등록';
+    document.getElementById('modalTitle').textContent=typeLabel+' 신규 등록';
     document.getElementById('modalEventTitle').value='';
     document.getElementById('modalEventDesc').value='';
     document.getElementById('modalDate').value='';
@@ -1012,13 +1105,15 @@ function saveEvent(){
   const desc=document.getElementById('modalEventDesc').value.trim();
   if(!dateVal){alert('날짜를 입력하세요.');return;}
   if(!title){alert('이슈 제목을 입력하세요.');return;}
-  roasEvents[dateVal]={title,desc};
+  const store=modalType==='warn'?warnEvents:roasEvents;
+  store[dateVal]={title,desc};
   closeEventModal();
   applyFilters();
 }
 function deleteEvent(){
   const dateVal=document.getElementById('modalDate').value;
-  if(dateVal&&roasEvents[dateVal]) delete roasEvents[dateVal];
+  const store=modalType==='warn'?warnEvents:roasEvents;
+  if(dateVal&&store[dateVal]) delete store[dateVal];
   closeEventModal();
   applyFilters();
 }
