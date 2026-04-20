@@ -309,23 +309,7 @@ textarea:focus{outline:none;border-color:var(--accent);}
 .page-form-box h3{font-size:14px;font-weight:700;margin-bottom:18px;}
 
 /* —— AI REPORT SECTION —— */
-.ai-section{background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
-.ai-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
-.ai-section-hdr h3{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}
-.ai-key-row{display:flex;gap:8px;margin-bottom:12px;align-items:center;flex-wrap:wrap;}
-.ai-key-input{flex:1;min-width:200px;padding:7px 12px;background:var(--card);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:12px;font-family:inherit;}
-.ai-key-input:focus{outline:none;border-color:var(--accent);}
-.ai-hint{font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;}
-.ai-report-out{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:20px;font-size:13px;line-height:2;color:var(--text);white-space:pre-wrap;display:none;margin-top:12px;}
-.ai-loading{font-size:12px;color:var(--accent);display:none;margin-top:8px;animation:pulse 1.2s ease-in-out infinite;}
 @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
-.ai-period-select{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
-.ai-feedback-box{margin-top:16px;display:none;}
-.ai-feedback-box label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:6px;}
-.ai-feedback-textarea{width:100%;height:80px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:12.5px;padding:10px 12px;resize:vertical;line-height:1.6;}
-.ai-feedback-textarea:focus{outline:none;border-color:var(--accent);}
-.ai-feedback-row{display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap;}
-.ai-char-count{font-size:11px;color:var(--muted);}
 </style>
 </head>
 <body>
@@ -635,43 +619,6 @@ textarea:focus{outline:none;border-color:var(--accent);}
     </table>
   </div>
 
-  <!-- AI 주간 보고서 -->
-  <div class="sec-title">🤖 AI 주간 종합 보고서</div>
-  <div class="ai-section">
-    <div class="ai-section-hdr">
-      <h3>✨ Gemini AI 분석 보고서 <span class="mbadge">Beta</span></h3>
-      <div style="font-size:11px;color:var(--muted)">현재 필터 기간 데이터 기반으로 보고서를 자동 생성합니다</div>
-    </div>
-    <div class="ai-hint" id="aiHintBox">
-      Gemini AI가 서버에 연결되어 있습니다. 버튼을 눌러 바로 보고서를 생성하세요.
-    </div>
-    <div class="ai-key-row" id="aiKeyRow" style="display:none;">
-      <input type="password" class="ai-key-input" id="geminiApiKey" placeholder="Gemini API Key 입력 (AIza...)"/>
-      <button class="btn" onclick="toggleKeyVisibility()" id="keyVisBtn">👁 보기</button>
-      <button class="btn btn-primary" onclick="saveApiKey()">저장</button>
-      <span id="apiKeySaved" style="font-size:11px;color:var(--a2);display:none;">✅ 저장됨</span>
-    </div>
-    <div class="ai-period-select">
-      <span class="filter-label" style="line-height:28px;">분석 기간:</span>
-      <button class="btn active" id="aiPeriod-lastWeek" onclick="setAiPeriod('lastWeek')">지난주</button>
-      <button class="btn" id="aiPeriod-last2w" onclick="setAiPeriod('last2w')">최근 2주</button>
-      <button class="btn" id="aiPeriod-lastMonth" onclick="setAiPeriod('lastMonth')">한달</button>
-    </div>
-    <button class="btn btn-primary" style="padding:10px 24px;font-size:13px;" onclick="generateAIReport()">🤖 AI 보고서 생성</button>
-    <div class="ai-loading" id="aiLoading">⟳ Gemini AI 분석 중입니다… 잠시만 기다려 주세요.</div>
-    <div class="ai-report-out" id="aiReportOut"></div>
-
-    <!-- 의견 박스 -->
-    <div class="ai-feedback-box" id="aiFeedbackBox">
-      <label>📝 추가 의견 / 보완 요청</label>
-      <textarea class="ai-feedback-textarea" id="aiFeedbackText" placeholder="예: 매체별 예산 재배분 전략을 더 구체적으로 작성해 주세요. / 다음 달 시즌 이슈를 반영해 주세요." oninput="updateCharCount()"></textarea>
-      <div class="ai-feedback-row">
-        <button class="btn btn-primary" onclick="regenerateWithFeedback()">↺ 의견 반영하여 재생성</button>
-        <button class="btn" onclick="clearFeedback()">초기화</button>
-        <span class="ai-char-count" id="aiCharCount">0자</span>
-      </div>
-    </div>
-  </div>
 
 </div><!-- /page-dashboard -->
 
@@ -1797,57 +1744,6 @@ function deleteHistory(){
   if(confirm('이 히스토리를 삭제하시겠습니까?')){ historyData=historyData.filter(x=>x.id!==id); closeHistoryModal(); renderHistoryTable(); }
 }
 
-// ————————————————————————————————————————
-// GEMINI AI 보고서
-// ————————————————————————————————————————
-let aiPeriodMode = 'lastWeek';
-let lastAiData = null;
-let lastAiBasePrompt = '';
-
-function setAiPeriod(p){
-  aiPeriodMode = p;
-  ['lastWeek','last2w','lastMonth'].forEach(x=>{
-    document.getElementById('aiPeriod-'+x).classList.toggle('active', x===p);
-  });
-}
-
-function updateCharCount(){
-  const len = document.getElementById('aiFeedbackText').value.length;
-  document.getElementById('aiCharCount').textContent = len + '자';
-}
-
-function clearFeedback(){
-  document.getElementById('aiFeedbackText').value = '';
-  updateCharCount();
-}
-
-function toggleKeyVisibility(){
-  const inp = document.getElementById('geminiApiKey');
-  const btn = document.getElementById('keyVisBtn');
-  if(inp.type==='password'){ inp.type='text'; btn.textContent='🙈 숨기기'; }
-  else { inp.type='password'; btn.textContent='👁 보기'; }
-}
-
-function saveApiKey(){
-  const key = document.getElementById('geminiApiKey').value.trim();
-  if(!key){ alert('API 키를 입력하세요.'); return; }
-  localStorage.setItem('gemini_api_key', key);
-  document.getElementById('geminiApiKey').value='';
-  document.getElementById('geminiApiKey').placeholder='저장된 키 사용 중';
-  const saved = document.getElementById('apiKeySaved');
-  saved.style.display='inline';
-  setTimeout(()=>saved.style.display='none', 3000);
-}
-
-function loadSavedApiKey(){
-  const key = localStorage.getItem('gemini_api_key');
-  if(key){
-    document.getElementById('geminiApiKey').placeholder='저장된 키 사용 중 (재입력하면 덮어쓰기)';
-    document.getElementById('apiKeySaved').style.display='inline';
-    setTimeout(()=>document.getElementById('apiKeySaved').style.display='none', 2000);
-  }
-}
-
 function getAiData(){
   const today = new Date('2026-04-20');
   let from, to;
@@ -1868,175 +1764,6 @@ function getAiData(){
   }).sort((a,b)=>a.date.localeCompare(b.date));
 }
 
-function buildPrompt(data, extraFeedback=''){
-  const totSpend = data.reduce((s,d)=>s+d.spend,0);
-  const totRev   = data.reduce((s,d)=>s+d.revenue,0);
-  const totPurch = data.reduce((s,d)=>s+d.purchase,0);
-  const totClicks= data.reduce((s,d)=>s+d.clicks,0);
-  const totImp   = data.reduce((s,d)=>s+d.imp,0);
-  const roas     = totSpend ? Math.round(totRev/totSpend*100) : 0;
-  const avgCtr   = (data.reduce((s,d)=>s+d.ctr,0)/data.length).toFixed(2);
-  const avgCpc   = totClicks ? Math.round(totSpend/totClicks) : 0;
-  const avgCpa   = totPurch  ? Math.round(totSpend/totPurch)  : 0;
-  const cvr      = totClicks ? (totPurch/totClicks*100).toFixed(2) : 0;
-  const avgSpend = totSpend/data.length;
-  const avgRoas  = data.reduce((s,d)=>s+d.roas,0)/data.length;
-
-  const highDays = data.filter(d=>d.roas>=HIGH_ROAS_THRESHOLD)
-    .map(d=>`  - ${d.date}: ROAS ${d.roas}%, 구매 ${d.purchase}건, 매출 ${(d.revenue/10000).toFixed(0)}만원${roasEvents[d.date]?' ['+roasEvents[d.date].title+']':''}`)
-    .join('\n');
-  const warnDays = data.filter(d=>d.spend>avgSpend && d.roas<avgRoas*WARN_ROAS_RATIO)
-    .map(d=>`  - ${d.date}: ROAS ${d.roas}%, 광고비 ${(d.spend/10000).toFixed(0)}만원, 구매 ${d.purchase}건${warnEvents[d.date]?' ['+warnEvents[d.date].title+']':''}`)
-    .join('\n');
-
-  const allDailyRows = data.map(d=>
-    `  ${d.date} | 광고비 ${(d.spend/10000).toFixed(0)}만 | 노출 ${d.imp.toLocaleString()} | 클릭 ${d.clicks.toLocaleString()} | CTR ${d.ctr.toFixed(2)}% | CPC ${d.cpc.toLocaleString()}원 | 구매 ${d.purchase}건 | CVR ${d.purchaseCvr.toFixed(2)}% | CPA ${d.purchaseCpa.toLocaleString()}원 | 매출 ${(d.revenue/10000).toFixed(0)}만 | ROAS ${d.roas}%`
-  ).join('\n');
-
-  const historyInRange = historyData
-    .filter(h=>h.date>=data[0].date && h.date<=data[data.length-1].date)
-    .sort((a,b)=>b.date.localeCompare(a.date))
-    .map(h=>`  - ${h.date} [${h.media}] ${h.action} / 사유: ${h.reason}`)
-    .join('\n');
-
-  const contentInRange = contentData
-    .filter(c=>c.startDate<=data[data.length-1].date)
-    .map(c=>`  - [${c.media}] ${c.name} (${c.format}) | ${c.startDate}~${c.endDate||'진행중'} | ROAS ${c.roas}% | 상태: ${c.status}`)
-    .join('\n');
-
-  const periodLabel = aiPeriodMode==='lastWeek'?'지난주':aiPeriodMode==='last2w'?'최근 2주':'최근 한달';
-
-  let prompt = `당신은 글로벌 마케팅 전문가로써 기간의 지표를 보고 마케팅적 분석과 인사이트를 포함한 결과 및 전략보고서를 생성해 주세요.
-
-## 브랜드 정보
-- 브랜드: 밀잇 (Mileat) — 밀키트 / 간편식 이커머스
-- 분석 기간: ${data[0].date} ~ ${data[data.length-1].date} (${periodLabel}, ${data.length}일)
-
-## 종합 KPI
-- 총 광고비: ${totSpend.toLocaleString()}원
-- 총 매출: ${totRev.toLocaleString()}원
-- 종합 ROAS: ${roas}%
-- 총 구매: ${totPurch.toLocaleString()}건
-- 총 노출: ${totImp.toLocaleString()}회
-- 총 클릭: ${totClicks.toLocaleString()}회
-- 평균 CTR: ${avgCtr}%
-- 평균 CPC: ${avgCpc.toLocaleString()}원
-- 구매 CPA: ${avgCpa.toLocaleString()}원
-- 클릭→구매 CVR: ${cvr}%
-- 일평균 광고비: ${Math.round(avgSpend).toLocaleString()}원
-
-## 매체별 성과 (4월 2주차)
-- Meta:   ROAS 173%, 광고비 점유율 83%, 구매 651건
-- Google: ROAS 440%, 광고비 점유율 10%, 구매 117건
-- GFA:    ROAS 164%, 광고비 점유율 4%,  구매 178건
-- Kakao:  ROAS 119%, 광고비 점유율 2%,  구매 12건
-
-## 고성과 일자 (ROAS ${HIGH_ROAS_THRESHOLD}%+)
-${highDays || '  - 해당 기간 없음'}
-
-## 고비용 저효율 경고 일자
-${warnDays || '  - 해당 기간 없음'}
-
-## 운영 집행 소재 현황
-${contentInRange || '  - 등록된 소재 없음'}
-
-## 캠페인 변경 이력
-${historyInRange || '  - 해당 기간 변경 이력 없음'}
-
-## 전체 일별 데이터 (${data.length}일)
-${allDailyRows}
-
----
-위 데이터를 바탕으로 아래 구조로 보고서를 작성해 주세요:
-
-1. **성과 요약** — 기간 전체 핵심 수치 종합 평가
-2. **주요 마케팅 인사이트** — 데이터에서 발견한 핵심 인사이트 3~5가지
-3. **매체별 성과 분석** — 각 채널 효율 평가 및 개선점
-4. **소재 / 크리에이티브 분석** — 집행 소재 성과 및 기여도
-5. **고성과 구간 분석** — 성과가 좋았던 날/이유
-6. **저효율 구간 분석** — 비용 대비 성과 미흡 구간 원인 분석
-7. **다음 기간 전략 권고** — 매체별 예산 배분, 소재, 타겟 전략
-8. **액션 플랜** — 즉시 실행 가능한 3~5가지 구체적 액션`;
-
-  if(extraFeedback && extraFeedback.trim()){
-    prompt += `\n\n---\n## 추가 요청 사항\n${extraFeedback.trim()}\n\n위 추가 요청 사항을 반드시 보고서에 반영해 주세요.`;
-  }
-
-  return prompt;
-}
-
-async function callGemini(prompt){
-  // Cloudflare Worker 프록시 우선 사용 (API 키 서버 측 보관)
-  const isWorker = location.hostname.includes('workers.dev') || location.hostname.includes('pages.dev') || (location.hostname !== 'localhost' && location.protocol === 'https:');
-
-  if(isWorker){
-    const res = await fetch('/api/gemini', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt})
-    });
-    const json = await res.json();
-    if(!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-    if(!json.text) throw new Error('응답 내용이 없습니다.');
-    return json.text;
-  }
-
-  // 로컬 개발 환경 — localStorage 키 직접 사용
-  const key = localStorage.getItem('gemini_api_key') || document.getElementById('geminiApiKey').value.trim();
-  if(!key) throw new Error('API 키를 입력하고 저장해 주세요.');
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{temperature:0.7,maxOutputTokens:4096}})
-  });
-  if(!res.ok){ const err=await res.json(); throw new Error(err.error?.message||`HTTP ${res.status}`); }
-  const json = await res.json();
-  const text = json.candidates?.[0]?.content?.parts?.[0]?.text;
-  if(!text) throw new Error('응답 내용이 없습니다.');
-  return text;
-}
-
-async function generateAIReport(){
-  const isWorker = location.hostname.includes('workers.dev') || location.hostname.includes('pages.dev') || (location.hostname !== 'localhost' && location.protocol === 'https:');
-  if(!isWorker){
-    const key = localStorage.getItem('gemini_api_key') || document.getElementById('geminiApiKey').value.trim();
-    if(!key){ alert('Gemini API 키를 입력하세요.'); return; }
-  }
-
-  lastAiData = getAiData();
-  if(!lastAiData.length){ alert('분석할 데이터가 없습니다. 기간을 확인해 주세요.'); return; }
-
-  lastAiBasePrompt = buildPrompt(lastAiData, '');
-  await _runReport(lastAiBasePrompt);
-}
-
-async function regenerateWithFeedback(){
-  if(!lastAiData){ alert('먼저 AI 보고서를 생성해 주세요.'); return; }
-  const feedback = document.getElementById('aiFeedbackText').value.trim();
-  const prompt = buildPrompt(lastAiData, feedback);
-  await _runReport(prompt);
-}
-
-async function _runReport(prompt){
-  const loadEl = document.getElementById('aiLoading');
-  const outEl  = document.getElementById('aiReportOut');
-  const fbBox  = document.getElementById('aiFeedbackBox');
-  loadEl.style.display='block';
-  outEl.style.display='none';
-  outEl.textContent='';
-  fbBox.style.display='none';
-  try {
-    const text = await callGemini(prompt);
-    loadEl.style.display='none';
-    outEl.style.display='block';
-    outEl.textContent = text;
-    fbBox.style.display='block';
-  } catch(e){
-    loadEl.style.display='none';
-    outEl.style.display='block';
-    outEl.textContent = '❌ 오류: '+e.message+'\n\nAPI 키를 확인하거나 잠시 후 다시 시도해 주세요.';
-  }
-}
 
 // —— LOGIN ——
 (function(){
@@ -2071,7 +1798,6 @@ function initDashboard(){
   document.getElementById('toDate').value='';
   applyFilters();
   document.getElementById('lastUpdate').textContent='로드 완료';
-  loadSavedApiKey();
 }
 
 // —— INIT ——
