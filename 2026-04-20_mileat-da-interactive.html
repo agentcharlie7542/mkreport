@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>밀잇 MD Report</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
   --bg:#0f1117;--surface:#1a1d27;--card:#22263a;--border:#2e3352;
@@ -321,16 +322,14 @@ textarea:focus{outline:none;border-color:var(--accent);}
       <div class="brand">밀잇 <span>MD Report</span></div>
       <div class="sub">AidenLab · 내부 전용 리포트</div>
     </div>
-    <div class="login-field">
-      <label>이메일</label>
-      <input type="email" id="loginEmail" placeholder="이메일 주소 입력" autocomplete="username"/>
+    <div style="font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:20px;text-align:center;">
+      구글 계정으로 로그인하면<br/>권한이 있는 스프레드시트 데이터를 바로 불러올 수 있습니다.
     </div>
-    <div class="login-field">
-      <label>비밀번호</label>
-      <input type="password" id="loginPw" placeholder="비밀번호 입력" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
-    </div>
-    <div class="login-err" id="loginErr"></div>
-    <button class="login-btn" onclick="doLogin()">로그인</button>
+    <button class="login-btn" id="googleLoginBtn" onclick="doGoogleLogin()" style="display:flex;align-items:center;justify-content:center;gap:10px;">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.71v2.26h2.92c1.71-1.57 2.68-3.88 2.68-6.61z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.83.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.97v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.71A5.41 5.41 0 0 1 3.68 9c0-.59.1-1.17.29-1.71V4.96H.97A9 9 0 0 0 0 9c0 1.45.35 2.82.97 4.04l3-2.33z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59A9 9 0 0 0 9 0 9 9 0 0 0 .97 4.96l3 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
+      Google 계정으로 로그인
+    </button>
+    <div class="login-err" id="loginErr" style="margin-top:12px;"></div>
     <div class="login-footer">© 2026 AidenLab. 권한 없는 접근 금지.</div>
   </div>
 </div>
@@ -351,6 +350,8 @@ textarea:focus{outline:none;border-color:var(--accent);}
     <button class="btn btn-icon" id="btnDataInput" onclick="toggleDataPanel()" title="데이터 입력">📥 데이터 입력</button>
     <button class="btn" id="btnExportCSV" onclick="exportCSV()">⬇ CSV 내보내기</button>
     <span id="lastUpdate" style="font-size:11px;color:var(--muted)">로드 중…</span>
+    <span id="userBadge" style="display:none;font-size:11px;color:var(--muted);padding:0 6px;border-left:1px solid var(--border);margin-left:4px;"></span>
+    <button class="btn" id="btnLogout" onclick="doLogout()" style="display:none;font-size:11px;">로그아웃</button>
   </div>
 </div>
 
@@ -414,6 +415,7 @@ textarea:focus{outline:none;border-color:var(--accent);}
       <div class="data-tabs">
         <button class="data-tab active" onclick="switchTab('paste')">CSV 붙여넣기</button>
         <button class="data-tab" onclick="switchTab('form')">직접 입력</button>
+        <button class="data-tab" onclick="switchTab('sheet')">📊 구글 시트</button>
         <button class="data-tab" onclick="switchTab('manage')">데이터 관리</button>
       </div>
 
@@ -454,6 +456,29 @@ textarea:focus{outline:none;border-color:var(--accent);}
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="addFormRow()">행 추가</button>
           <div class="data-status" id="formStatus"></div>
+        </div>
+      </div>
+
+      <!-- 구글 시트 연동 -->
+      <div class="data-section" id="tab-sheet">
+        <div class="data-hint">
+          로그인한 구글 계정에 <b>보기 권한이 공유된</b> 스프레드시트만 불러올 수 있습니다.<br/>
+          컬럼 순서: <code>날짜</code> <code>광고비용</code> <code>노출</code> <code>클릭</code> <code>CTR%</code> <code>CPM</code> <code>CPC</code> <code>장바구니</code> <code>구매</code> <code>장바구니CVR%</code> <code>구매CVR%</code> <code>장바구니CPA</code> <code>구매CPA</code> <code>매출</code> <code>ROAS%</code> <span style="color:var(--muted)">(첫 행 헤더 자동 감지)</span>
+        </div>
+        <div class="form-grid" style="grid-template-columns:1fr;gap:10px;">
+          <div class="form-group">
+            <label>스프레드시트 URL 또는 ID</label>
+            <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/XXX/edit 또는 시트ID"/>
+          </div>
+          <div class="form-group">
+            <label>범위 (예: <code>시트1!A:O</code> 또는 <code>A2:O</code>)</label>
+            <input type="text" id="sheetRange" placeholder="시트1!A:O" value="시트1!A:O"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="fetchSheet()">📥 불러오기</button>
+          <button class="btn" onclick="saveSheetPref()" title="다음 접속 시 자동 기억">💾 설정 저장</button>
+          <div class="data-status" id="sheetStatus"></div>
         </div>
       </div>
 
@@ -1398,11 +1423,12 @@ function toggleDataBody(){
 }
 function switchTab(t){
   document.querySelectorAll('.data-tab').forEach((el,i)=>{
-    el.classList.toggle('active',['paste','form','manage'][i]===t);
+    el.classList.toggle('active',['paste','form','sheet','manage'][i]===t);
   });
   document.querySelectorAll('.data-section').forEach(el=>el.classList.remove('active'));
   document.getElementById('tab-'+t).classList.add('active');
   if(t==='manage') updateManageTable();
+  if(t==='sheet') loadSheetPref();
 }
 
 function parsePaste(){
@@ -1765,32 +1791,178 @@ function getAiData(){
 }
 
 
-// —— LOGIN ——
-(function(){
-  const KEY = 'mileat_auth';
-  if(sessionStorage.getItem(KEY)==='ok'){
-    document.getElementById('loginOverlay').style.display='none';
-    document.getElementById('appWrapper').style.display='block';
-  }
-})();
+// ————————————————————————————————————————
+// GOOGLE LOGIN + SHEETS API
+// ————————————————————————————————————————
+const GOOGLE_CLIENT_ID = '745681621509-e9361jomsdr61461i955lnfnt96cm5dt.apps.googleusercontent.com';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/userinfo.email';
 
-function doLogin(){
-  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const pw    = document.getElementById('loginPw').value;
-  const errEl = document.getElementById('loginErr');
-  const AU = 'marketing@aidenlab.io';
-  const AP = 'mealit500$$';
-  if(email === AU && pw === AP){
-    sessionStorage.setItem('mileat_auth','ok');
-    document.getElementById('loginOverlay').style.display='none';
-    document.getElementById('appWrapper').style.display='block';
-    initDashboard();
-  } else {
-    errEl.textContent = '이메일 또는 비밀번호가 올바르지 않습니다.';
-    document.getElementById('loginPw').value='';
-    document.getElementById('loginPw').focus();
-    setTimeout(()=>errEl.textContent='', 3000);
+let tokenClient = null;
+let accessToken = null;
+let userEmail   = null;
+
+function initGoogleClient(){
+  if(!window.google || !window.google.accounts){
+    // GIS 스크립트 아직 로드 중 — 재시도
+    setTimeout(initGoogleClient, 300);
+    return;
   }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPES,
+    callback: handleTokenResponse,
+    error_callback: (err)=>{
+      const msg = (err && err.type) ? ('구글 로그인 취소/실패: '+err.type) : '구글 로그인 실패';
+      document.getElementById('loginErr').textContent = msg;
+    }
+  });
+}
+
+function doGoogleLogin(){
+  if(!tokenClient){ initGoogleClient(); setTimeout(doGoogleLogin, 500); return; }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+async function handleTokenResponse(resp){
+  if(resp.error){
+    document.getElementById('loginErr').textContent = '로그인 실패: '+resp.error;
+    return;
+  }
+  accessToken = resp.access_token;
+  sessionStorage.setItem('google_token', accessToken);
+  // 사용자 이메일 조회
+  try{
+    const r = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: 'Bearer '+accessToken }
+    });
+    const u = await r.json();
+    userEmail = u.email || '';
+    sessionStorage.setItem('google_email', userEmail);
+  }catch(e){ userEmail = ''; }
+
+  showApp();
+}
+
+function showApp(){
+  document.getElementById('loginOverlay').style.display='none';
+  document.getElementById('appWrapper').style.display='block';
+  if(userEmail){
+    const b = document.getElementById('userBadge');
+    b.textContent = '👤 '+userEmail;
+    b.style.display = 'inline-block';
+    document.getElementById('btnLogout').style.display='inline-block';
+  }
+  initDashboard();
+}
+
+function doLogout(){
+  if(accessToken && window.google && google.accounts && google.accounts.oauth2){
+    google.accounts.oauth2.revoke(accessToken, ()=>{});
+  }
+  sessionStorage.removeItem('google_token');
+  sessionStorage.removeItem('google_email');
+  accessToken = null; userEmail = null;
+  location.reload();
+}
+
+function ensureToken(){
+  return new Promise((resolve,reject)=>{
+    if(accessToken){ resolve(accessToken); return; }
+    if(!tokenClient){ reject(new Error('로그인이 필요합니다.')); return; }
+    tokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      accessToken = resp.access_token;
+      sessionStorage.setItem('google_token', accessToken);
+      tokenClient.callback = handleTokenResponse;
+      resolve(accessToken);
+    };
+    tokenClient.requestAccessToken({ prompt: '' });
+  });
+}
+
+// —— SHEETS API ——
+function extractSheetId(input){
+  const s = (input||'').trim();
+  const m = s.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  if(m) return m[1];
+  if(/^[a-zA-Z0-9-_]{20,}$/.test(s)) return s;
+  return null;
+}
+
+async function fetchSheet(){
+  const urlInput = document.getElementById('sheetUrl').value;
+  const range    = document.getElementById('sheetRange').value.trim() || '시트1!A:O';
+  const sheetId  = extractSheetId(urlInput);
+  if(!sheetId){ setStatus('sheetStatus','❌ 올바른 스프레드시트 URL 또는 ID를 입력하세요.','#ff6b6b'); return; }
+
+  setStatus('sheetStatus','⏳ 불러오는 중…','#8a8fa8');
+  try{
+    const token = await ensureToken();
+    const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}`;
+    const res = await fetch(apiUrl, { headers: { Authorization: 'Bearer '+token } });
+    if(res.status === 401){
+      accessToken = null;
+      sessionStorage.removeItem('google_token');
+      throw new Error('세션 만료. 로그아웃 후 다시 로그인하세요.');
+    }
+    if(res.status === 403){
+      throw new Error('권한 없음. 이 시트가 로그인 계정에 공유돼 있는지, Sheets API가 활성화됐는지 확인하세요.');
+    }
+    if(res.status === 404){
+      throw new Error('시트/범위를 찾을 수 없습니다. URL과 범위를 확인하세요.');
+    }
+    if(!res.ok){
+      const errJson = await res.json().catch(()=>({}));
+      throw new Error(errJson.error?.message || ('HTTP '+res.status));
+    }
+    const data = await res.json();
+    const rows = data.values || [];
+    const { added, skipped } = mergeSheetRows(rows);
+    setStatus('sheetStatus', `✅ ${added}건 반영 ${skipped?'('+skipped+'건 건너뜀)':''}`, '#00d4aa');
+    applyFilters();
+  }catch(e){
+    setStatus('sheetStatus','❌ '+e.message, '#ff6b6b');
+  }
+}
+
+function mergeSheetRows(rows){
+  let added=0, skipped=0;
+  const isDate = v => /^\d{4}[-./]\d{2}[-./]\d{2}/.test(String(v||''));
+  const startIdx = (rows.length && !isDate(rows[0][0])) ? 1 : 0; // 첫 행이 헤더면 건너뜀
+  for(let i=startIdx;i<rows.length;i++){
+    const cols = rows[i];
+    if(!cols || cols.length<2 || !isDate(cols[0])){ skipped++; continue; }
+    const date = String(cols[0]).replace(/[./]/g,'-').slice(0,10);
+    const row = {
+      date, spend:pn(cols[1]), imp:pn(cols[2]), clicks:pn(cols[3]),
+      ctr:pn(cols[4]), cpm:pn(cols[5]), cpc:pn(cols[6]),
+      cart:pn(cols[7]), purchase:pn(cols[8]),
+      cartCvr:pn(cols[9]), purchaseCvr:pn(cols[10]),
+      cartCpa:pn(cols[11]), purchaseCpa:pn(cols[12]),
+      revenue:pn(cols[13]), roas:pn(cols[14])
+    };
+    if(row.roas===0 && row.spend>0 && row.revenue>0) row.roas=Math.round(row.revenue/row.spend*100);
+    const existing = allData.findIndex(d=>d.date===date);
+    if(existing>=0) allData[existing]=row; else allData.push(row);
+    added++;
+  }
+  allData.sort((a,b)=>a.date.localeCompare(b.date));
+  return { added, skipped };
+}
+
+const SHEET_PREF_KEY = 'mileat_sheet_pref';
+function saveSheetPref(){
+  const url   = document.getElementById('sheetUrl').value.trim();
+  const range = document.getElementById('sheetRange').value.trim();
+  localStorage.setItem(SHEET_PREF_KEY, JSON.stringify({url, range}));
+  setStatus('sheetStatus','💾 다음 접속부터 자동으로 채워집니다.','#00d4aa');
+}
+function loadSheetPref(){
+  try{
+    const p = JSON.parse(localStorage.getItem(SHEET_PREF_KEY)||'{}');
+    if(p.url   && !document.getElementById('sheetUrl').value)   document.getElementById('sheetUrl').value   = p.url;
+    if(p.range && !document.getElementById('sheetRange').value) document.getElementById('sheetRange').value = p.range;
+  }catch(e){}
 }
 
 function initDashboard(){
@@ -1801,12 +1973,25 @@ function initDashboard(){
 }
 
 // —— INIT ——
-if(sessionStorage.getItem('mileat_auth')==='ok'){
-  document.getElementById('fromDate').value='';
-  document.getElementById('toDate').value='';
-  applyFilters();
-  document.getElementById('lastUpdate').textContent='로드 완료';
-}
+(function(){
+  // GIS 초기화
+  if(window.google && window.google.accounts){
+    initGoogleClient();
+  } else {
+    // 스크립트 로드 대기
+    const iv = setInterval(()=>{
+      if(window.google && window.google.accounts){ clearInterval(iv); initGoogleClient(); }
+    }, 200);
+  }
+  // 이전 세션 복원
+  const t = sessionStorage.getItem('google_token');
+  const e = sessionStorage.getItem('google_email');
+  if(t){
+    accessToken = t;
+    userEmail = e || '';
+    showApp();
+  }
+})();
 </script>
 </body>
 </html>
