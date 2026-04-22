@@ -8,10 +8,21 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 :root{
-  --bg:#0f1117;--surface:#1a1d27;--card:#22263a;--border:#2e3352;
-  --accent:#6c63ff;--a2:#00d4aa;--a3:#ff6b6b;--a4:#ffd93d;
-  --text:#e8eaf0;--muted:#8a8fa8;--meta:#5b9bd5;--gfa:#03c75a;
-  --google:#ea4335;--kakao:#c8a800;
+  /* 흰 배경 · 검정 본문 · 고대비 라이트 테마 */
+  --bg:#ffffff;
+  --surface:#f5f6fa;
+  --card:#ffffff;
+  --border:#dde1ec;
+  --accent:#4c3fd4;     /* 진한 보라 — 흰 배경에서 뚜렷 */
+  --a2:#0a9c7e;         /* 진한 teal — ROAS High */
+  --a3:#d43a3e;         /* 진한 red   — 경고/위험 */
+  --a4:#a07108;         /* 다크 골든로드 — 기존 노란색 자리 (흰 배경에서 가독 확보) */
+  --text:#101423;       /* near-black 본문 */
+  --muted:#4a5168;      /* WCAG AA 보조 텍스트 */
+  --meta:#2a6ab0;
+  --gfa:#028a3f;
+  --google:#b52a1f;
+  --kakao:#7a6600;
   --radius:10px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -24,9 +35,9 @@ body{font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif;background:var(--bg
   display:flex;align-items:center;justify-content:center;
 }
 .login-box{
-  background:var(--surface);border:1px solid var(--border);
+  background:var(--card);border:1px solid var(--border);
   border-radius:16px;padding:40px 36px;width:100%;max-width:400px;
-  box-shadow:0 24px 64px rgba(0,0,0,.5);
+  box-shadow:0 16px 48px rgba(22,28,45,.12);
 }
 .login-logo{
   text-align:center;margin-bottom:28px;
@@ -139,7 +150,7 @@ body{font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif;background:var(--bg
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px;}
 thead th{background:var(--surface);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px;padding:9px 10px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
 thead th:first-child{text-align:left;}
-tbody td{padding:9px 10px;text-align:right;border-bottom:1px solid rgba(46,51,82,.5);white-space:nowrap;}
+tbody td{padding:9px 10px;text-align:right;border-bottom:1px solid rgba(16,20,35,.06);white-space:nowrap;}
 tbody td:first-child{text-align:left;font-weight:600;}
 tbody tr:last-child td{border-bottom:none;}
 tbody tr.total{background:rgba(108,99,255,.06);}
@@ -199,7 +210,10 @@ textarea:focus{outline:none;border-color:var(--accent);}
 .sec-title::after{content:'';flex:1;height:1px;background:var(--border);}
 
 /* —— METRIC BADGE —— */
-.mbadge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:rgba(108,99,255,.2);color:var(--accent);}
+.mbadge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;background:rgba(76,63,212,.1);color:var(--accent);}
+
+/* 카드 · 패널 기본 그림자 (라이트 테마) */
+.chart-card,.table-card,.highlight-panel,.kpi-card,.page-table-card,.data-panel{box-shadow:0 1px 3px rgba(22,28,45,.04);}
 
 /* —— HIGH ROAS EVENT PANEL —— */
 .highlight-panel{
@@ -234,13 +248,13 @@ textarea:focus{outline:none;border-color:var(--accent);}
 
 /* 이벤트 편집 모달 */
 .modal-overlay{
-  position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;
+  position:fixed;inset:0;background:rgba(16,20,35,.55);z-index:1000;
   display:flex;align-items:center;justify-content:center;
 }
 .modal-box{
-  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  background:var(--card);border:1px solid var(--border);border-radius:14px;
   padding:28px;width:100%;max-width:480px;
-  box-shadow:0 16px 48px rgba(0,0,0,.5);
+  box-shadow:0 16px 48px rgba(22,28,45,.2);
 }
 .modal-box h3{font-size:14px;font-weight:700;margin-bottom:18px;}
 .modal-field{margin-bottom:14px;}
@@ -258,19 +272,19 @@ textarea:focus{outline:none;border-color:var(--accent);}
 .chart-star-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;min-height:24px;}
 .chart-star{
   display:inline-flex;align-items:center;gap:4px;
-  background:rgba(255,217,61,.12);border:1px solid rgba(255,217,61,.35);
-  border-radius:20px;padding:3px 10px;font-size:11px;color:var(--a4);
+  background:rgba(160,113,8,.08);border:1px solid rgba(160,113,8,.35);
+  border-radius:20px;padding:3px 10px;font-size:11px;color:var(--a4);font-weight:600;
   cursor:pointer;transition:all .15s;
 }
-.chart-star:hover{background:rgba(255,217,61,.22);}
+.chart-star:hover{background:rgba(160,113,8,.16);}
 .chart-star .star-icon{font-size:12px;}
 .chart-warn{
   display:inline-flex;align-items:center;gap:4px;
-  background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.4);
-  border-radius:20px;padding:3px 10px;font-size:11px;color:var(--a3);
+  background:rgba(212,58,62,.08);border:1px solid rgba(212,58,62,.35);
+  border-radius:20px;padding:3px 10px;font-size:11px;color:var(--a3);font-weight:600;
   cursor:pointer;transition:all .15s;
 }
-.chart-warn:hover{background:rgba(255,107,107,.22);}
+.chart-warn:hover{background:rgba(212,58,62,.16);}
 .chart-warn .warn-icon{font-size:12px;}
 
 /* —— FOOTER —— */
@@ -294,19 +308,19 @@ textarea:focus{outline:none;border-color:var(--accent);}
 .insight-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
 .insight-toolbar h2{font-size:15px;font-weight:700;}
 .type-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;}
-.type-high{background:rgba(255,217,61,.15);color:var(--a4);}
-.type-warn{background:rgba(255,107,107,.15);color:var(--a3);}
+.type-high{background:rgba(160,113,8,.12);color:var(--a4);}
+.type-warn{background:rgba(212,58,62,.12);color:var(--a3);}
 
 /* —— CONTENT / HISTORY PAGE —— */
 .page-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
 .page-toolbar h2{font-size:15px;font-weight:700;}
 .status-badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:600;}
-.status-active{background:rgba(0,212,170,.15);color:var(--a2);}
-.status-ended{background:rgba(138,143,168,.15);color:var(--muted);}
-.status-paused{background:rgba(255,217,61,.15);color:var(--a4);}
+.status-active{background:rgba(10,156,126,.12);color:var(--a2);}
+.status-ended{background:rgba(74,81,104,.1);color:var(--muted);}
+.status-paused{background:rgba(160,113,8,.12);color:var(--a4);}
 .page-table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;overflow-x:auto;}
-.page-form-modal{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:center;justify-content:center;}
-.page-form-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:520px;box-shadow:0 16px 48px rgba(0,0,0,.5);max-height:90vh;overflow-y:auto;}
+.page-form-modal{position:fixed;inset:0;background:rgba(16,20,35,.55);z-index:1000;display:flex;align-items:center;justify-content:center;}
+.page-form-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px;width:100%;max-width:520px;box-shadow:0 16px 48px rgba(22,28,45,.2);max-height:90vh;overflow-y:auto;}
 .page-form-box h3{font-size:14px;font-weight:700;margin-bottom:18px;}
 
 /* —— AI REPORT SECTION —— */
@@ -572,7 +586,7 @@ textarea:focus{outline:none;border-color:var(--accent);}
   <!-- 고비용 저효율 경고 -->
   <div class="sec-title" id="warnSection" style="display:none;">⚠️ 고비용 저효율 경고</div>
   <div class="highlight-panel" id="warnPanel" style="display:none;">
-    <h3>⚠️ 비용 초과 · 효율 저하 <span class="mbadge" style="background:rgba(255,107,107,.2);color:var(--a3);" id="warnCount">0건</span></h3>
+    <h3>⚠️ 비용 초과 · 효율 저하 <span class="mbadge" style="background:rgba(212,58,62,.12);color:var(--a3);" id="warnCount">0건</span></h3>
     <div class="highlight-list" id="warnList"></div>
   </div>
 
@@ -985,7 +999,7 @@ function isWarnDay(d, data){
 const fmtShort = n => n>=10000000?(n/10000000).toFixed(1)+'천만':n>=1000000?(n/1000000).toFixed(1)+'백만':n>=10000?(n/10000).toFixed(0)+'만':Math.round(n).toLocaleString();
 const pn = s => parseFloat(String(s||'0').replace(/[,%\s원]/g,''))||0;
 const roasCls = r => r>=300?'rh':r>=170?'rm':'rl';
-const gc = 'rgba(46,51,82,0.6)';
+const gc = 'rgba(16,20,35,0.08)';  // 라이트 테마 grid
 Chart.defaults.color='#8a8fa8';
 Chart.defaults.font.family="'Segoe UI','Apple SD Gothic Neo',sans-serif";
 Chart.defaults.font.size=11;
@@ -1159,8 +1173,8 @@ function updateTrendChart(data){
 
   // 포인트 색상 — 고성과 금색 / 경고 빨강 / 기본 보라
   const pointColors = currentView==='daily'
-    ? data.map(d => isHighDay(d) ? '#ffd93d' : isWarnDay(d,data) ? '#ff6b6b' : '#6c63ff')
-    : labels.map(()=>'#6c63ff');
+    ? data.map(d => isHighDay(d) ? '#a07108' : isWarnDay(d,data) ? '#d43a3e' : '#4c3fd4')
+    : labels.map(()=>'#4c3fd4');
   const pointRadii = currentView==='daily'
     ? data.map(d => (isHighDay(d)||isWarnDay(d,data)) ? 7 : (data.length>60?0:3))
     : labels.map(()=>3);
@@ -1179,8 +1193,8 @@ function updateTrendChart(data){
         const high=isHighDay(d), warn=isWarnDay(d,data);
         if(!high && !warn) return;
         const x=xScale.getPixelForValue(i);
-        const lineColor=high?'rgba(255,217,61,0.4)':'rgba(255,107,107,0.4)';
-        const labelColor=high?'#ffd93d':'#ff6b6b';
+        const lineColor=high?'rgba(160,113,8,0.4)':'rgba(212,58,62,0.4)';
+        const labelColor=high?'#a07108':'#d43a3e';
         const icon=high?'★ ':'⚠ ';
         const ev=high?roasEvents[d.date]:warnEvents[d.date];
         // 수직 점선
@@ -1200,7 +1214,7 @@ function updateTrendChart(data){
         ctx2.textAlign='center';
         ctx2.fillText(icon+d.roas+'%', x, chartArea.top-6);
         if(ev){
-          ctx2.fillStyle=high?'rgba(255,217,61,0.75)':'rgba(255,107,107,0.75)';
+          ctx2.fillStyle=high?'rgba(160,113,8,0.9)':'rgba(212,58,62,0.9)';
           ctx2.font='10px Segoe UI';
           const shortTitle=ev.title.length>14?ev.title.slice(0,14)+'…':ev.title;
           ctx2.fillText(shortTitle, x, chartArea.top+14);
@@ -1218,7 +1232,7 @@ function updateTrendChart(data){
       datasets:[
         {
           type:'line',label:metricLabels[metric],data:values,
-          borderColor:'#6c63ff',backgroundColor:'rgba(108,99,255,.12)',
+          borderColor:'#4c3fd4',backgroundColor:'rgba(76,63,212,.10)',
           tension:.4,
           pointRadius:pointRadii,
           pointBackgroundColor:pointColors,
@@ -1229,8 +1243,8 @@ function updateTrendChart(data){
         {
           type:'bar',label:'광고비 (만원)',data:spend2,
           backgroundColor: currentView==='daily'
-            ? data.map(d=>isHighDay(d)?'rgba(255,217,61,.35)':isWarnDay(d,data)?'rgba(255,107,107,.3)':'rgba(0,212,170,.3)')
-            : labels.map(()=>'rgba(0,212,170,.3)'),
+            ? data.map(d=>isHighDay(d)?'rgba(160,113,8,.45)':isWarnDay(d,data)?'rgba(212,58,62,.4)':'rgba(10,156,126,.4)')
+            : labels.map(()=>'rgba(10,156,126,.4)'),
           borderRadius:3,yAxisID:'y',order:2,
         }
       ]
@@ -1240,7 +1254,7 @@ function updateTrendChart(data){
       layout:{padding:{top:28}},
       interaction:{mode:'index',intersect:false},
       plugins:{
-        legend:{labels:{color:'#8a8fa8',boxWidth:12,padding:12}},
+        legend:{labels:{color:'#4a5168',boxWidth:12,padding:12}},
         tooltip:{callbacks:{
           title: ctx=>{
             const label=ctx[0].label;
@@ -1263,9 +1277,9 @@ function updateTrendChart(data){
         }}
       },
       scales:{
-        x:{grid:{color:gc},ticks:{color:'#8a8fa8',maxTicksLimit:data.length>30?15:data.length}},
-        y:{grid:{color:gc},ticks:{color:'#00d4aa',callback:v=>v+'만'},position:'left'},
-        y2:{grid:{display:false},ticks:{color:'#6c63ff',callback:v=>isPercent?v+'%':v.toLocaleString()},position:'right'}
+        x:{grid:{color:gc},ticks:{color:'#4a5168',maxTicksLimit:data.length>30?15:data.length}},
+        y:{grid:{color:gc},ticks:{color:'#0a9c7e',callback:v=>v+'만'},position:'left'},
+        y2:{grid:{display:false},ticks:{color:'#4c3fd4',callback:v=>isPercent?v+'%':v.toLocaleString()},position:'right'}
       }
     }
   });
@@ -1429,8 +1443,8 @@ function updateMediaCharts(){
       responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw}%`}}},
       scales:{
-        x:{grid:{color:gc},ticks:{color:'#8a8fa8'}},
-        y:{grid:{color:gc},ticks:{color:'#8a8fa8',callback:v=>v+'%'},beginAtZero:true}
+        x:{grid:{color:gc},ticks:{color:'#4a5168'}},
+        y:{grid:{color:gc},ticks:{color:'#4a5168',callback:v=>v+'%'},beginAtZero:true}
       }
     }
   });
@@ -1444,7 +1458,7 @@ function updateMediaCharts(){
     },
     options:{
       responsive:true,maintainAspectRatio:false,cutout:'65%',
-      plugins:{legend:{position:'right',labels:{color:'#8a8fa8',boxWidth:10,padding:10}}}
+      plugins:{legend:{position:'right',labels:{color:'#4a5168',boxWidth:10,padding:10}}}
     }
   });
 
@@ -1895,24 +1909,24 @@ function normMediaKey(raw){
 // Action (what was done) + Reason (why) keyword rules.
 // Matching is additive — a single log row can be tagged with multiple actions & reasons.
 const ACTION_CATEGORIES = [
-  { key:'OFF',          label:'OFF 처리',    color:'#ff6b6b', patterns:[/\bOFF\b/i, /오프(?!라인)/, /중단/] },
-  { key:'BUDGET_UP',    label:'예산 증액',   color:'#00d4aa', patterns:[/증액/, /상향/, /예산\s*확대/, /\d+\s*[>→]\s*\d+/] },
-  { key:'BUDGET_DOWN',  label:'예산 감액',   color:'#ffa940', patterns:[/감액/, /하향/, /예산\s*(감소|축소)/, /\d+\s*-\s*>\s*\d+/] },
-  { key:'RELAUNCH',     label:'라이브 재개', color:'#5b9bd5', patterns:[/재개/, /재라이브/, /라이브\s*재개/] },
-  { key:'NEW_CREATIVE', label:'신규 소재',   color:'#b59cff', patterns:[/콘텐츠\s*추가/, /소재\s*(추가|교체|투입)/, /신규\s*소재/] },
-  { key:'TEST',         label:'A/B 테스트',  color:'#8a8fa8', patterns:[/A\/B/, /테스트/, /리테스트/] },
-  { key:'STRUCTURE',    label:'캠페인 구조', color:'#c792ea', patterns:[/복제/, /분리/, /구조\s*개편/, /예산\s*비율/, /비중\s*설정/] },
+  { key:'OFF',          label:'OFF 처리',    color:'#d43a3e', patterns:[/\bOFF\b/i, /오프(?!라인)/, /중단/] },
+  { key:'BUDGET_UP',    label:'예산 증액',   color:'#0a9c7e', patterns:[/증액/, /상향/, /예산\s*확대/, /\d+\s*[>→]\s*\d+/] },
+  { key:'BUDGET_DOWN',  label:'예산 감액',   color:'#d97706', patterns:[/감액/, /하향/, /예산\s*(감소|축소)/, /\d+\s*-\s*>\s*\d+/] },
+  { key:'RELAUNCH',     label:'라이브 재개', color:'#2a6ab0', patterns:[/재개/, /재라이브/, /라이브\s*재개/] },
+  { key:'NEW_CREATIVE', label:'신규 소재',   color:'#7a4dd4', patterns:[/콘텐츠\s*추가/, /소재\s*(추가|교체|투입)/, /신규\s*소재/] },
+  { key:'TEST',         label:'A/B 테스트',  color:'#4a5168', patterns:[/A\/B/, /테스트/, /리테스트/] },
+  { key:'STRUCTURE',    label:'캠페인 구조', color:'#a06cd4', patterns:[/복제/, /분리/, /구조\s*개편/, /예산\s*비율/, /비중\s*설정/] },
 ];
 
 const OFF_REASONS = [
-  { key:'LOW_ROAS',    label:'ROAS 저조',     color:'#ff6b6b', patterns:[/ROAS\s*[\d.]*\s*%?\s*(저조|미달|이하|하락)/i, /효율\s*(저조|미달|하락)/, /저효율/, /ROAS\s*(1\d{2}|[0-9]{1,2})\s*%/] },
-  { key:'NO_REVENUE',  label:'매출 미발생',   color:'#ffa940', patterns:[/매출\s*(미발생|없음|미)/, /구매\s*(미발생|없음)/, /매출\s*0/] },
-  { key:'HIGH_CPA',    label:'CPA 초과',      color:'#ff8acc', patterns:[/CPA\s*(초과|높|\d{1,3},?\d{3})/, /객단가\s*(초과|넘|이상)/, /CPA.*객단가/] },
-  { key:'SOLDOUT',     label:'품절/재고',     color:'#b59cff', patterns:[/품절/, /재고\s*(소진|부족)/, /단종/] },
-  { key:'ML_LIMIT',    label:'머신러닝 제한', color:'#5b9bd5', patterns:[/머신러닝/, /학습\s*제한/, /\bML\b.*제한/] },
-  { key:'FATIGUE',     label:'소재 피로도',   color:'#ffd14b', patterns:[/피로도/] },
-  { key:'LOW_CVR',     label:'CVR 저조',      color:'#ff6b6b', patterns:[/CVR\s*(저조|\d+\s*%?\s*이하)/] },
-  { key:'HIGH_PERF',   label:'고성과 확장',   color:'#00d4aa', patterns:[/고성과/, /(우수|안정|개선)\s*추세/, /ROAS\s*(2|3|4|5|6|7|8|9)\d{2}\s*%\s*(이상|유지|우수)/] },
+  { key:'LOW_ROAS',    label:'ROAS 저조',     color:'#d43a3e', patterns:[/ROAS\s*[\d.]*\s*%?\s*(저조|미달|이하|하락)/i, /효율\s*(저조|미달|하락)/, /저효율/, /ROAS\s*(1\d{2}|[0-9]{1,2})\s*%/] },
+  { key:'NO_REVENUE',  label:'매출 미발생',   color:'#d97706', patterns:[/매출\s*(미발생|없음|미)/, /구매\s*(미발생|없음)/, /매출\s*0/] },
+  { key:'HIGH_CPA',    label:'CPA 초과',      color:'#b8358a', patterns:[/CPA\s*(초과|높|\d{1,3},?\d{3})/, /객단가\s*(초과|넘|이상)/, /CPA.*객단가/] },
+  { key:'SOLDOUT',     label:'품절/재고',     color:'#7a4dd4', patterns:[/품절/, /재고\s*(소진|부족)/, /단종/] },
+  { key:'ML_LIMIT',    label:'머신러닝 제한', color:'#2a6ab0', patterns:[/머신러닝/, /학습\s*제한/, /\bML\b.*제한/] },
+  { key:'FATIGUE',     label:'소재 피로도',   color:'#a07108', patterns:[/피로도/] },
+  { key:'LOW_CVR',     label:'CVR 저조',      color:'#d43a3e', patterns:[/CVR\s*(저조|\d+\s*%?\s*이하)/] },
+  { key:'HIGH_PERF',   label:'고성과 확장',   color:'#0a9c7e', patterns:[/고성과/, /(우수|안정|개선)\s*추세/, /ROAS\s*(2|3|4|5|6|7|8|9)\d{2}\s*%\s*(이상|유지|우수)/] },
 ];
 
 function categorizeAction(text){
@@ -2133,11 +2147,11 @@ function renderBudgetRevenueGap(){
   const periodLbl = latestWeek || '전체';
   summary.innerHTML = `<b>${periodLbl}</b> · 총 광고비 <b>${fmtShort(totalSpend)}</b> · 총 매출 <b>${fmtShort(totalRevenue)}</b> · 통합 ROAS <b>${totalSpend ? Math.round(totalRevenue/totalSpend*100) : 0}%</b>`;
   const lvlBadge = l => ({
-    high:  {icon:'🔴', label:'광고비 과다', bg:'rgba(255,107,107,.15)', color:'#ff6b6b'},
-    mid:   {icon:'🟡', label:'주의',       bg:'rgba(255,169,64,.15)', color:'#ffa940'},
-    over:  {icon:'🟢', label:'매출 초과',   bg:'rgba(0,212,170,.15)', color:'#00d4aa'},
-    bonus: {icon:'🟢', label:'양호',       bg:'rgba(0,212,170,.10)', color:'#00d4aa'},
-    ok:    {icon:'⚪', label:'균형',       bg:'rgba(138,143,168,.10)',color:'#8a8fa8'},
+    high:  {icon:'🔴', label:'광고비 과다', bg:'rgba(212,58,62,.10)',  color:'#d43a3e'},
+    mid:   {icon:'🟡', label:'주의',       bg:'rgba(217,119,6,.12)',  color:'#a65a06'},
+    over:  {icon:'🟢', label:'매출 초과',   bg:'rgba(10,156,126,.12)', color:'#0a9c7e'},
+    bonus: {icon:'🟢', label:'양호',       bg:'rgba(10,156,126,.08)', color:'#0a9c7e'},
+    ok:    {icon:'⚪', label:'균형',       bg:'rgba(74,81,104,.08)',  color:'#4a5168'},
   })[l];
   container.innerHTML = list.map(p => {
     const b = lvlBadge(p.level);
@@ -2156,7 +2170,7 @@ function renderBudgetRevenueGap(){
           ROAS ${Math.round(p.roas)}%
         </span>
       </div>
-      <div style="padding:4px 10px;border-radius:12px;background:${b.color};color:#1a1d2e;font-size:11px;font-weight:700;">${b.label}</div>
+      <div style="padding:4px 10px;border-radius:12px;background:${b.color};color:#fff;font-size:11px;font-weight:700;">${b.label}</div>
     </div>`;
   }).join('');
 }
@@ -2276,8 +2290,8 @@ function renderActionCategories(){
         indexAxis:'y', responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip:{callbacks:{label: c => c.parsed.x + '건'}} },
         scales:{
-          x:{ticks:{color:'#8a8fa8'}, grid:{color:'rgba(255,255,255,.05)'}, beginAtZero:true},
-          y:{ticks:{color:'#e6e8ef'}, grid:{display:false}},
+          x:{ticks:{color:'#4a5168'}, grid:{color:'rgba(16,20,35,.06)'}, beginAtZero:true},
+          y:{ticks:{color:'#101423'}, grid:{display:false}},
         }
       }
     });
