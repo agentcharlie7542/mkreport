@@ -2443,6 +2443,9 @@ const DEEP_RANGES = {
   history: "'history'!A1:E500",
 };
 
+// 밀잇 DA_퍼포먼스_Weekly — 대시보드 전용 시트. 로그인 후 URL 입력이 비어 있으면 자동으로 채워짐.
+const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1cYiOu4I8N_ZUBQOobIEi4hVGctyqxqonKWwTjAWaUGA/edit';
+
 async function fetchSheet(){
   const urlInput = document.getElementById('sheetUrl').value;
   let override = document.getElementById('sheetRange').value.trim();
@@ -2453,6 +2456,8 @@ async function fetchSheet(){
   if(!sheetId){ setStatus('sheetStatus','❌ 올바른 스프레드시트 URL 또는 ID를 입력하세요.','#ff6b6b'); return; }
 
   setStatus('sheetStatus','⏳ 전체 데이터 불러오는 중 (Summary · Raw data · insight · history)…','#8a8fa8');
+  const lu = document.getElementById('lastUpdate');
+  if(lu) lu.textContent = '⏳ 시트 로딩 중…';
   try{
     const token = await ensureToken();
     const ranges = [summaryRange, DEEP_RANGES.raw, DEEP_RANGES.insight, DEEP_RANGES.history];
@@ -2496,11 +2501,16 @@ async function fetchSheet(){
     if(skipped) parts.push(`(건너뜀 ${skipped})`);
     if(dataQualityNotes.length) parts.push(`⚠️ 품질노트 ${dataQualityNotes.length}`);
     setStatus('sheetStatus', parts.join(' · '), '#00d4aa');
+    if(lu){
+      const ts = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
+      lu.textContent = `✅ 시트 연동 · ${ts}`;
+    }
 
     applyFilters();
     renderDeepAnalytics();
   }catch(e){
     setStatus('sheetStatus','❌ '+e.message, '#ff6b6b');
+    if(lu) lu.textContent = '⚠️ 시트 연동 실패 (데이터 입력 패널에서 확인)';
   }
 }
 
@@ -2539,17 +2549,28 @@ function saveSheetPref(){
 function loadSheetPref(){
   try{
     const p = JSON.parse(localStorage.getItem(SHEET_PREF_KEY)||'{}');
-    if(p.url   && !document.getElementById('sheetUrl').value)   document.getElementById('sheetUrl').value   = p.url;
-    if(p.range && !document.getElementById('sheetRange').value) document.getElementById('sheetRange').value = p.range;
+    const urlInput = document.getElementById('sheetUrl');
+    const rangeInput = document.getElementById('sheetRange');
+    if(p.url && !urlInput.value) urlInput.value = p.url;
+    // 저장된 URL이 없으면 밀잇 시트를 기본값으로
+    if(!urlInput.value) urlInput.value = DEFAULT_SHEET_URL;
+    if(p.range && !rangeInput.value && p.range !== '시트1!A:O') rangeInput.value = p.range;
   }catch(e){}
 }
 
 function initDashboard(){
   document.getElementById('fromDate').value='';
   document.getElementById('toDate').value='';
+  loadSheetPref();           // pre-populate sheet URL (defaults to 밀잇 sheet)
   applyFilters();
-  renderDeepAnalytics();   // empty-state render — real data lands after fetchSheet()
+  renderDeepAnalytics();     // empty-state render — real data lands after fetchSheet()
   document.getElementById('lastUpdate').textContent='로드 완료';
+
+  // Auto-fetch on login if we have a URL + token (so 구글 시트 탭을 열지 않아도 데이터가 뜸)
+  const url = document.getElementById('sheetUrl').value.trim();
+  if(url && accessToken){
+    fetchSheet();
+  }
 }
 
 // —— INIT ——
