@@ -60,9 +60,13 @@ export default {
       }
     }
 
-    // 대시보드 HTML 서빙
+    // 대시보드 HTML 서빙 — 브라우저가 옛 버전 캐시하지 않도록 강제 재검증
     return new Response(dashboardHtml, {
-      headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+      headers: {
+        'Content-Type': 'text/html;charset=UTF-8',
+        'Cache-Control': 'no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+      },
     });
   },
 };
