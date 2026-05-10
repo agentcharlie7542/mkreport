@@ -742,7 +742,7 @@ textarea:focus{outline:none;border-color:var(--accent);}
     </div>
   </div>
 
-  <div class="sec-title">⭐ 고성과 이슈 — ROAS 350%+</div>
+  <div class="sec-title">⭐ 고성과 이슈 — ROAS 300%+</div>
   <div class="page-table-card">
     <table id="insightHighTable" style="min-width:600px;">
       <thead><tr>
@@ -931,7 +931,7 @@ const MEDIA_WEEK = [
 ];
 
 // —— HIGH ROAS EVENTS ——
-const HIGH_ROAS_THRESHOLD = 350;
+const HIGH_ROAS_THRESHOLD = 300;
 const WARN_ROAS_RATIO = 0.85;   // 평균 ROAS의 85% 미만
 
 let roasEvents = {
@@ -1426,8 +1426,48 @@ function deleteEvent(){
 }
 
 // —— MEDIA CHARTS ——
+const MEDIA_COLORS = {Meta:'#5b9bd5', GFA:'#03c75a', Google:'#ea4335', Kakao:'#c8a800', Tiktok:'#222'};
+function aggregateMediaFromRaw(){
+  if(!rawCreatives || !rawCreatives.length) return null;
+  const within = (d) => {
+    if(!d) return false;
+    if(fromDate && d < fromDate) return false;
+    if(toDate && d > toDate) return false;
+    return true;
+  };
+  const byP = {};
+  rawCreatives.forEach(r => {
+    if(!r.platform) return;
+    if(!within(r.date)) return;
+    const p = byP[r.platform] = byP[r.platform] || {media:r.platform, spend:0, imp:0, clicks:0, purchase:0, revenue:0};
+    p.spend    += r.spend||0;
+    p.imp      += r.imp||0;
+    p.clicks   += r.click||0;
+    p.purchase += r.purchase||0;
+    p.revenue  += r.revenue||0;
+  });
+  const list = Object.values(byP);
+  if(!list.length) return null;
+  const totalSpend = list.reduce((s,m)=>s+m.spend,0) || 1;
+  list.forEach(m => {
+    m.ctr         = m.imp ? +(m.clicks/m.imp*100).toFixed(2) : 0;
+    m.cpc         = m.clicks ? Math.round(m.spend/m.clicks) : 0;
+    m.purchaseCvr = m.clicks ? +(m.purchase/m.clicks*100).toFixed(2) : 0;
+    m.purchaseCpa = m.purchase ? Math.round(m.spend/m.purchase) : 0;
+    m.roas        = m.spend ? Math.round(m.revenue/m.spend*100) : 0;
+    m.share       = Math.round(m.spend/totalSpend*100);
+    m.color       = MEDIA_COLORS[m.media] || '#6b7280';
+  });
+  const order = ['Meta','GFA','Google','Kakao','Tiktok'];
+  list.sort((a,b)=>{
+    const ai=order.indexOf(a.media), bi=order.indexOf(b.media);
+    return (ai<0?99:ai) - (bi<0?99:bi);
+  });
+  return list;
+}
 function updateMediaCharts(){
-  const filtered=MEDIA_WEEK.filter(m=>activeChannels.has(m.media));
+  const source = aggregateMediaFromRaw() || MEDIA_WEEK;
+  const filtered = source.filter(m => activeChannels.has(m.media));
 
   if(mediaRoasChart) mediaRoasChart.destroy();
   mediaRoasChart=new Chart(document.getElementById('mediaRoasChart'),{
@@ -2451,10 +2491,10 @@ function extractSheetId(input){
 // Default ranges per confirmed tab names (Summary / Raw data / insight / history).
 // Override only the Summary range via the UI input (daily 일자 data).
 const DEEP_RANGES = {
-  summary: "'Summary'!A1:Q80",
-  raw:     "'Raw data'!A1:N10000",
-  insight: "'insight'!A1:J500",
-  history: "'history'!A1:E500",
+  summary: "'Summary'!A:Q",
+  raw:     "'Raw data'!A:N",
+  insight: "'insight'!A:J",
+  history: "'history'!A:E",
 };
 
 // 밀잇 DA_퍼포먼스_Weekly — 대시보드 전용 시트. 로그인 후 URL 입력이 비어 있으면 자동으로 채워짐.
