@@ -2551,18 +2551,29 @@ async function fetchSheet(){
     insightLog   = parseInsightLog(insightRows);
     historyLog   = parseHistoryLog(historyRows);
 
+    // 시트의 마지막 날짜까지 자동으로 보이게 — 사용자가 박아둔 옛 toDate가 신규 데이터를 잘라버리지 않도록
+    const firstDate = allData.length ? allData[0].date : '';
+    const lastDate  = allData.length ? allData[allData.length-1].date : '';
+    if(lastDate){
+      const fromEl = document.getElementById('fromDate');
+      const toEl   = document.getElementById('toDate');
+      if(toEl.value && toEl.value < lastDate) toEl.value = lastDate;
+      if(fromEl.value && fromEl.value > lastDate) fromEl.value = firstDate; // 비정상 범위 복구
+    }
+
     const parts = [
       `✅ 일자 ${added}건`,
       `소재행 ${rawCreatives.length}`,
       `인사이트 ${insightLog.length}`,
       `히스토리 ${historyLog.length}`,
     ];
-    if(skipped) parts.push(`(건너뜀 ${skipped})`);
+    if(lastDate) parts.push(`(${firstDate.slice(5)} ~ ${lastDate.slice(5)})`);
+    if(skipped) parts.push(`건너뜀 ${skipped}`);
     if(dataQualityNotes.length) parts.push(`⚠️ 품질노트 ${dataQualityNotes.length}`);
     setStatus('sheetStatus', parts.join(' · '), '#00d4aa');
     if(lu){
       const ts = new Date().toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
-      lu.textContent = `✅ 시트 연동 · ${ts}`;
+      lu.textContent = `✅ 시트 연동 · ${ts}${lastDate ? ' · 최신 ' + lastDate.slice(5) : ''}`;
     }
 
     applyFilters();
@@ -2602,12 +2613,20 @@ async function refreshSheetFromHeader(){
 
 function mergeSheetRows(rows){
   let added=0, skipped=0;
-  const isDate = v => /^\d{4}[-./]\d{2}[-./]\d{2}/.test(String(v||''));
+  // 한 자리 월/일도 허용 — 시트 로케일이 '2026-5-10'으로 저장하는 경우 대응
+  const DATE_RE = /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/;
+  const isDate = v => DATE_RE.test(String(v||''));
+  // YYYY-M-D → YYYY-MM-DD 정규화 (사전순 정렬이 깨지지 않게)
+  const normDate = v => {
+    const m = DATE_RE.exec(String(v||''));
+    if(!m) return '';
+    return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
+  };
   const startIdx = (rows.length && !isDate(rows[0][0])) ? 1 : 0; // 첫 행이 헤더면 건너뜀
   for(let i=startIdx;i<rows.length;i++){
     const cols = rows[i];
     if(!cols || cols.length<2 || !isDate(cols[0])){ skipped++; continue; }
-    const date = String(cols[0]).replace(/[./]/g,'-').slice(0,10);
+    const date = normDate(cols[0]);
     const row = {
       date, spend:pn(cols[1]), imp:pn(cols[2]), clicks:pn(cols[3]),
       ctr:pn(cols[4]), cpm:pn(cols[5]), cpc:pn(cols[6]),
