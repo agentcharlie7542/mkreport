@@ -2010,15 +2010,26 @@ function categorizeAction(text){
 
 // "03월 31일" / "03.31" / "2026-03-31" → ISO date
 function normalizeDateKR(s, fallbackYear){
-  if(!s) return '';
+  if(s == null || s === '') return '';
+  // 1) 시트 시리얼 넘버 (예: 45371 → 1899-12-30 epoch + N일)
+  if(typeof s === 'number' || /^\d{4,5}(\.\d+)?$/.test(String(s).trim())){
+    const n = Number(s);
+    if(n > 30000 && n < 100000){
+      const d = new Date(Date.UTC(1899,11,30) + Math.floor(n)*86400000);
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+    }
+  }
   const t = String(s).trim();
-  const iso = t.match(/(\d{4})-(\d{2})-(\d{2})/);
-  if(iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  // 2) YYYY-MM-DD / YYYY.MM.DD / YYYY/MM/DD / 'YYYY. MM. DD.'(한국 로케일, 공백+마침표)
+  //    한 자리 월/일도 허용
+  const ymd = t.match(/^(\d{4})[\s.\-/]+(\d{1,2})[\s.\-/]+(\d{1,2})/);
+  if(ymd) return `${ymd[1]}-${String(ymd[2]).padStart(2,'0')}-${String(ymd[3]).padStart(2,'0')}`;
+  // 3) 'n월 d일'
   const year = fallbackYear || (new Date().getFullYear());
   let m = t.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
-  if(!m) m = t.match(/^(\d{1,2})[.\/\-](\d{1,2})/);
+  if(!m) m = t.match(/^(\d{1,2})[.\/\-](\d{1,2})/);  // 'M.D' / 'M/D' / 'M-D' (연도 누락)
   if(m) return `${year}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
-  return t;
+  return '';
 }
 
 // ————————————————————————————————————————
@@ -2650,44 +2661,81 @@ async function refreshSheetFromHeader(){
   }
 }
 
-// 'Meta' / 'Google' 탭 — 주차별 집계 (시트 내 캠페인별 섹션은 자동 제외)
-// 컬럼: A=매체1 | B=주차 | C=소진금액 | D=노출 | E=링크클릭 | F=CTR | G=CPM | H=CPC
-//       I=장바구니 | J=구매 | K=구매전환값(매출) | L=CVR | M=ROAS
+// 'Meta' / 'Google' 탭 — 주차별 집계
+// 헤더는 어디서든 '주차' + '소진 금액' 두 컬럼이 같은 행에 보이면 그 행을 헤더로 간주.
+// 그 다음 행부터 '주차' 컬럼에 'N월 N주차' 패턴이 있는 행만 채택.
+// 두 번째 섹션('캠페인 별' / '계정 별')은 헤더가 다르므로 자동 종료.
 function parseMediaWeekly(rows, expectedMedia){
   if(!rows || !rows.length) return [];
-  const weekRe = /(\d+)월\s*(\d+)주차/;
-  const out = [];
-  let inSection = false;
+  const weekRe = /(\d+)\s*월\s*(\d+)\s*주\s*차?/;
+  const norm = c => String(c||'').trim();
+  const findCol = (h, names) => {
+    for(const n of names){
+      const i = h.findIndex(c => c === n || c.replace(/\s+/g,'') === n.replace(/\s+/g,''));
+      if(i >= 0) return i;
+    }
+    return -1;
+  };
+  // 헤더 행 찾기
+  let hi = -1, h = null;
   for(let i=0;i<rows.length;i++){
-    const cols = rows[i] || [];
-    const a = String(cols[0]||'').trim();
-    const b = String(cols[1]||'').trim();
-    // 섹션 시작 — 헤더 행 '매체1 | 주차'
-    if(a === '매체1' && b === '주차'){ inSection = true; continue; }
-    if(!inSection) continue;
-    // 두 번째 섹션 '캠페인 별' 헤더를 만나면 종료 (campaign-level 데이터는 사용 안 함)
-    if(a === '캠페인명' || a.startsWith('캠페인')) break;
-    // 총계 / 소계 행 스킵
-    if(a.includes('총계') || b.includes('총계')) continue;
-    // col B에 주차 라벨이 있어야 데이터 행
-    const m = weekRe.exec(b);
-    if(!m) continue;
+    const r = (rows[i]||[]).map(norm);
+    const hasWeek  = r.some(c => c === '주차');
+    const hasSpend = r.some(c => c.includes('소진') || c === '광고비용' || c === '광고비');
+    if(hasWeek && hasSpend){ hi = i; h = r; break; }
+  }
+  if(hi < 0){
+    console.warn(`[${expectedMedia}] 헤더 행을 찾지 못함 (필요: '주차' + '소진 금액'). rows.length=${rows.length}, sample row 0:`, rows[0]);
+    return [];
+  }
+  const C = {
+    media:    findCol(h, ['매체1','매체']),
+    week:     findCol(h, ['주차']),
+    spend:    findCol(h, ['소진 금액 (VAT 미포함)','소진 금액','소진금액','광고비용','광고비']),
+    imp:      findCol(h, ['노출']),
+    clicks:   findCol(h, ['링크 클릭','클릭']),
+    ctr:      findCol(h, ['CTR']),
+    cpm:      findCol(h, ['CPM']),
+    cpc:      findCol(h, ['CPC']),
+    cart:     findCol(h, ['장바구니에 담기','장바구니']),
+    purchase: findCol(h, ['구매']),
+    revenue:  findCol(h, ['구매 전환값','매출']),
+    cvr:      findCol(h, ['CVR']),
+    roas:     findCol(h, ['ROAS']),
+  };
+  const get = (r,i,d=0) => i>=0 ? pn(r[i]) : d;
+  const out = [];
+  let skipped = 0;
+  for(let i=hi+1;i<rows.length;i++){
+    const r = rows[i] || [];
+    const a = norm(r[0]);
+    // 다음 섹션(캠페인/계정) 헤더 만나면 종료
+    if(a === '캠페인명' || a.startsWith('캠페인') || a.startsWith('계정')) break;
+    // 총계/소계 스킵
+    if(r.some(c => /총계/.test(String(c||'')))) continue;
+    // 주차 셀에 'N월 N주차' 패턴 있어야 채택
+    const weekRaw = norm(r[C.week]);
+    const m = weekRe.exec(weekRaw);
+    if(!m){ if(weekRaw) skipped++; continue; }
     out.push({
       week: `${m[1]}월 ${m[2]}주차`,
       sortKey: parseInt(m[1])*10 + parseInt(m[2]),
       media: expectedMedia,
-      spend:    pn(cols[2]),
-      imp:      pn(cols[3]),
-      clicks:   pn(cols[4]),
-      ctr:      pn(cols[5]),
-      cpm:      pn(cols[6]),
-      cpc:      pn(cols[7]),
-      cart:     pn(cols[8]),
-      purchase: pn(cols[9]),
-      revenue:  pn(cols[10]),
-      cvr:      pn(cols[11]),
-      roas:     pn(cols[12]),
+      spend: get(r,C.spend),
+      imp: get(r,C.imp),
+      clicks: get(r,C.clicks),
+      ctr: get(r,C.ctr),
+      cpm: get(r,C.cpm),
+      cpc: get(r,C.cpc),
+      cart: get(r,C.cart),
+      purchase: get(r,C.purchase),
+      revenue: get(r,C.revenue),
+      cvr: get(r,C.cvr),
+      roas: get(r,C.roas),
     });
+  }
+  if(out.length === 0){
+    console.warn(`[${expectedMedia}] 헤더는 찾았으나 주차 데이터 0건. header row idx=${hi}, header=`, h, ' / 다음 5행:', rows.slice(hi+1, hi+6));
   }
   return out;
 }
@@ -2734,20 +2782,17 @@ function renderMediaWeeklyComparison(){
 
 function mergeSheetRows(rows){
   let added=0, skipped=0;
-  // 한 자리 월/일도 허용 — 시트 로케일이 '2026-5-10'으로 저장하는 경우 대응
-  const DATE_RE = /^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/;
-  const isDate = v => DATE_RE.test(String(v||''));
-  // YYYY-M-D → YYYY-MM-DD 정규화 (사전순 정렬이 깨지지 않게)
-  const normDate = v => {
-    const m = DATE_RE.exec(String(v||''));
-    if(!m) return '';
-    return `${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`;
-  };
-  const startIdx = (rows.length && !isDate(rows[0][0])) ? 1 : 0; // 첫 행이 헤더면 건너뜀
-  for(let i=startIdx;i<rows.length;i++){
+  const skippedSamples = [];
+  for(let i=0;i<rows.length;i++){
     const cols = rows[i];
-    if(!cols || cols.length<2 || !isDate(cols[0])){ skipped++; continue; }
-    const date = normDate(cols[0]);
+    if(!cols || cols.length<2){ skipped++; continue; }
+    // normalizeDateKR이 모든 형식 흡수: ISO, 한국 로케일('2026. 03. 15.'), 시리얼 넘버, 'n월 d일' 등
+    const date = normalizeDateKR(cols[0], 2026);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+      skipped++;
+      if(skippedSamples.length < 5) skippedSamples.push({i, raw:cols[0], cols:cols.slice(0,3)});
+      continue;
+    }
     const row = {
       date, spend:pn(cols[1]), imp:pn(cols[2]), clicks:pn(cols[3]),
       ctr:pn(cols[4]), cpm:pn(cols[5]), cpc:pn(cols[6]),
@@ -2762,6 +2807,12 @@ function mergeSheetRows(rows){
     added++;
   }
   allData.sort((a,b)=>a.date.localeCompare(b.date));
+  if(skipped > 0 && skippedSamples.length){
+    console.warn('[Summary] 날짜 인식 실패 — skipped:', skipped, 'samples (i/raw/cols[0..2]):', skippedSamples);
+    if(added === 0){
+      dataQualityNotes.push(`Summary 탭 ${skipped}행 전부 날짜 인식 실패 — 콘솔(F12)에서 'Summary 날짜 인식 실패' 경고를 확인하세요. raw 예: <code>${String(skippedSamples[0].raw||'').slice(0,40)}</code>`);
+    }
+  }
   return { added, skipped };
 }
 
