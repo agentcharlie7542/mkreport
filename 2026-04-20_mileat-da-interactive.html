@@ -487,8 +487,8 @@ textarea:focus{outline:none;border-color:var(--accent);}
             <input type="text" id="sheetUrl" placeholder="https://docs.google.com/spreadsheets/d/XXX/edit 또는 시트ID"/>
           </div>
           <div class="form-group">
-            <label>Summary 범위 override (선택) <span style="color:var(--muted);font-weight:400;">— 비워두면 <code>'Summary'!A1:Q80</code> 기본값 사용</span></label>
-            <input type="text" id="sheetRange" placeholder="'Summary'!A1:Q80"/>
+            <label>Summary 범위 override (선택) <span style="color:var(--muted);font-weight:400;">— 비워두면 <code>'Summary'!A:Q</code>(전체 행) 기본값 사용</span></label>
+            <input type="text" id="sheetRange" placeholder="'Summary'!A:Q"/>
           </div>
         </div>
         <div style="display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap;">
@@ -2504,8 +2504,12 @@ const DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1cYiOu4I8N_ZUB
 async function fetchSheet(){
   const urlInput = document.getElementById('sheetUrl').value;
   let override = document.getElementById('sheetRange').value.trim();
-  // 과거 기본값(시트1!A:O)은 현재 시트 구조와 안 맞으므로 무시.
-  if(override === '시트1!A:O' || override === '시트1') override = '';
+  // 과거 기본값들은 신규 날짜를 잘라먹으므로 무시 (시트1!A:O = 옛 시트, A1:Q80 = 옛 80행 제한)
+  const STALE_OVERRIDES = new Set([
+    '시트1!A:O', '시트1',
+    "'Summary'!A1:Q80", 'Summary!A1:Q80',
+  ]);
+  if(STALE_OVERRIDES.has(override)) override = '';
   const summaryRange = override || DEEP_RANGES.summary;
   const sheetId  = extractSheetId(urlInput);
   if(!sheetId){ setStatus('sheetStatus','❌ 올바른 스프레드시트 URL 또는 ID를 입력하세요.','#ff6b6b'); return; }
@@ -2636,7 +2640,8 @@ function loadSheetPref(){
     if(p.url && !urlInput.value) urlInput.value = p.url;
     // 저장된 URL이 없으면 밀잇 시트를 기본값으로
     if(!urlInput.value) urlInput.value = DEFAULT_SHEET_URL;
-    if(p.range && !rangeInput.value && p.range !== '시트1!A:O') rangeInput.value = p.range;
+    const STALE = ['시트1!A:O', '시트1', "'Summary'!A1:Q80", 'Summary!A1:Q80'];
+    if(p.range && !rangeInput.value && !STALE.includes(p.range)) rangeInput.value = p.range;
   }catch(e){}
 }
 
