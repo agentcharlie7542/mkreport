@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>밀잇 DA Ads Audit Dashboard — 4월 3주차</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:#ffffff; --surface:#f5f6fa; --card:#ffffff;
+  --border:#dde1ec; --accent:#4c3fd4; --a2:#0a9c7e;
+  --a3:#d43a3e; --a4:#a07108; --a5:#e8690a;
+  --text:#101423; --muted:#4a5168; --radius:10px;
+  --meta:#2a6ab0; --gfa:#028a3f; --google:#b52a1f; --kakao:#7a6600;
+  --shadow:0 1px 4px rgba(22,28,45,.07);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI','Apple SD Gothic Neo',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100;flex-wrap:wrap;gap:10px;}
+.topbar-title{font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.topbar-title span{color:var(--accent);}
+.topbar-meta{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:16px;}
+.badge{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;color:#fff;}
+.badge-week{background:var(--accent);}
+.badge-live{background:var(--a2);}
+
+/* MAIN */
+.main{padding:24px 28px;max-width:1400px;margin:0 auto;}
+
+/* SECTION TITLE */
+.sec{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:24px 0 12px;display:flex;align-items:center;gap:8px;}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:12px;margin-bottom:6px;}
+.kpi-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;box-shadow:var(--shadow);}
+.kpi-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--kc,var(--accent));}
+.kpi-lbl{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+.kpi-val{font-size:21px;font-weight:700;margin-top:6px;letter-spacing:-.5px;}
+.kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px;}
+.up{color:var(--a2);} .dn{color:var(--a3);}
+.arrow-up::before{content:'▲ ';font-size:9px;}
+.arrow-dn::before{content:'▼ ';font-size:9px;}
+
+/* CHART ROW */
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.chart-row.three{grid-template-columns:1fr 1fr 1fr;}
+.chart-row.wide{grid-template-columns:1fr;}
+@media(max-width:860px){.chart-row,.chart-row.three{grid-template-columns:1fr;}}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);}
+.chart-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:6px;}
+.chart-hdr h3{font-size:13px;font-weight:600;}
+.chart-hdr h3 small{font-size:11px;color:var(--muted);font-weight:400;margin-left:5px;}
+.chart-wrap{position:relative;height:210px;}
+.chart-wrap.sm{height:170px;}
+.chart-wrap.lg{height:260px;}
+
+/* PLATFORM LEGEND */
+.plat-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;}
+.plat-dot{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted);}
+.dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+
+/* TABLE */
+.table-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:14px;overflow-x:auto;box-shadow:var(--shadow);}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:780px;}
+thead th{background:var(--surface);color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.3px;padding:9px 12px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;}
+thead th:first-child{text-align:left;}
+tbody td{padding:9px 12px;text-align:right;border-bottom:1px solid rgba(16,20,35,.05);white-space:nowrap;}
+tbody td:first-child{text-align:left;font-weight:600;}
+tbody tr:last-child td{border:none;}
+tbody tr.total-row{background:rgba(76,63,212,.04);}
+tbody tr.total-row td{font-weight:700;color:var(--accent);border-top:1px solid var(--border);}
+.rh{color:var(--a2);font-weight:600;}
+.rm{color:var(--a4);font-weight:600;}
+.rl{color:var(--a3);font-weight:600;}
+.plat-tag{display:inline-flex;align-items:center;gap:5px;font-weight:700;}
+.plat-tag .dot{width:8px;height:8px;}
+
+/* AUDIT PANEL */
+.audit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+@media(max-width:860px){.audit-grid{grid-template-columns:1fr;}}
+.audit-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
+.audit-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.audit-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;}
+.audit-grade{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0;}
+.grade-b{background:#0a9c7e;} .grade-c{background:#a07108;} .grade-d{background:#d43a3e;}
+
+/* SCORE BAR */
+.score-section{margin-bottom:14px;}
+.score-label-row{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px;}
+.score-label{color:var(--muted);font-weight:600;}
+.score-val{font-weight:700;}
+.score-bar{height:7px;background:var(--surface);border-radius:4px;overflow:hidden;}
+.score-fill{height:100%;border-radius:4px;transition:width .6s ease;}
+.fill-green{background:var(--a2);}
+.fill-yellow{background:var(--a4);}
+.fill-red{background:var(--a3);}
+.fill-accent{background:var(--accent);}
+
+/* TOTAL SCORE */
+.total-score{text-align:center;padding:12px 0 16px;border-bottom:1px solid var(--border);margin-bottom:16px;}
+.total-score .big{font-size:38px;font-weight:800;letter-spacing:-1px;}
+.total-score .label{font-size:11px;color:var(--muted);margin-top:2px;}
+
+/* ISSUES */
+.issues-list{display:flex;flex-direction:column;gap:7px;}
+.issue-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);}
+.issue-sev{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;color:#fff;white-space:nowrap;flex-shrink:0;margin-top:1px;}
+.sev-critical{background:#d43a3e;}
+.sev-high{background:#e8690a;}
+.sev-medium{background:#a07108;}
+.issue-body{flex:1;}
+.issue-title{font-size:12px;font-weight:600;margin-bottom:2px;}
+.issue-desc{font-size:11px;color:var(--muted);line-height:1.5;}
+.quick-win-badge{font-size:10px;background:rgba(10,156,126,.12);color:var(--a2);padding:1px 6px;border-radius:8px;font-weight:600;margin-left:6px;}
+
+/* QUICK WINS */
+.qw-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:14px;}
+.qw-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow);border-left:3px solid var(--a2);}
+.qw-card.high{border-left-color:var(--a5);}
+.qw-card.critical{border-left-color:var(--a3);}
+.qw-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.qw-icon{font-size:18px;}
+.qw-title{font-size:12px;font-weight:700;}
+.qw-desc{font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:8px;}
+.qw-meta{display:flex;gap:8px;font-size:10px;font-weight:600;}
+.qw-time{color:var(--accent);}
+.qw-impact{color:var(--a2);}
+
+/* DISCLAIMER */
+.disclaimer{background:rgba(76,63,212,.05);border:1px solid rgba(76,63,212,.15);border-radius:8px;padding:12px 16px;font-size:11px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+.disclaimer strong{color:var(--accent);}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-title">밀잇 <span>DA</span> Ads Audit</div>
+  <div class="topbar-meta">
+    <span class="badge badge-week">4월 3주차 · 04.06 – 04.12</span>
+    <span class="badge badge-live">Google + Meta 분석</span>
+    <span style="font-size:12px;color:var(--muted);">기준: ads/google-meta-rules.md v1.5</span>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ── 전체 KPI ── -->
+  <div class="sec">전체 성과 요약</div>
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--kc:var(--accent)">
+      <div class="kpi-lbl">총 소진비용</div>
+      <div class="kpi-val">2,684만</div>
+      <div class="kpi-sub"><span class="arrow-up up">전주 대비 +2.3%</span></div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--gfa)">
+      <div class="kpi-lbl">총 구매</div>
+      <div class="kpi-val">1,148건</div>
+      <div class="kpi-sub"><span class="arrow-up up">전주 대비 +10.8%</span></div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a2)">
+      <div class="kpi-lbl">구매 CPA</div>
+      <div class="kpi-val">₩23,377</div>
+      <div class="kpi-sub"><span class="arrow-dn up">전주 대비 -7.7% 개선</span></div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--meta)">
+      <div class="kpi-lbl">총 CTR</div>
+      <div class="kpi-val">1.15%</div>
+      <div class="kpi-sub"><span class="arrow-up up">전주 대비 +0.06%p</span></div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--google)">
+      <div class="kpi-lbl">총 노출</div>
+      <div class="kpi-val">293.5만</div>
+      <div class="kpi-sub"><span class="arrow-dn dn">전주 대비 -7.5%</span></div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a4)">
+      <div class="kpi-lbl">총 클릭</div>
+      <div class="kpi-val">33,672</div>
+      <div class="kpi-sub"><span class="arrow-dn dn">전주 대비 -2.2%</span></div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--a5)">
+      <div class="kpi-lbl">구매CVR</div>
+      <div class="kpi-val">3.41%</div>
+      <div class="kpi-sub"><span class="arrow-up up">전주 대비 +0.40%p</span></div>
+    </div>
+    <div class="kpi-card" style="--kc:var(--kakao)">
+      <div class="kpi-lbl">장바구니 CPA</div>
+      <div class="kpi-val">₩16,215</div>
+      <div class="kpi-sub"><span class="arrow-dn dn">전주 대비 +1.4%</span></div>
+    </div>
+  </div>
+
+  <!-- ── 채널별 차트 ── -->
+  <div class="sec">채널별 성과</div>
+  <div class="chart-row three">
+
+    <div class="chart-card">
+      <div class="chart-hdr"><h3>소진비용 비중 <small>4월 3주차</small></h3></div>
+      <div class="chart-wrap sm"><canvas id="budgetDonut"></canvas></div>
+      <div class="plat-legend" style="margin-top:12px;justify-content:center;">
+        <div class="plat-dot"><div class="dot" style="background:var(--meta)"></div>Meta 83.5%</div>
+        <div class="plat-dot"><div class="dot" style="background:var(--google)"></div>Google 8.6%</div>
+        <div class="plat-dot"><div class="dot" style="background:var(--gfa)"></div>GFA 6.1%</div>
+        <div class="plat-dot"><div class="dot" style="background:var(--kakao)"></div>Kakao 1.7%</div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-hdr"><h3>채널별 CTR <small>vs 규칙 기준</small></h3></div>
+      <div class="chart-wrap sm"><canvas id="ctrBar"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-hdr"><h3>채널별 구매CPA <small>단위: 원</small></h3></div>
+      <div class="chart-wrap sm"><canvas id="cpaBar"></canvas></div>
+    </div>
+
+  </div>
+
+  <!-- ── 주차별 트렌드 ── -->
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-hdr"><h3>주차별 소진비용 추이 <small>3월 3주차 ~ 4월 4주차</small></h3></div>
+      <div class="chart-wrap lg"><canvas id="spendTrend"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-hdr"><h3>주차별 구매 & 구매CVR 추이</h3></div>
+      <div class="chart-wrap lg"><canvas id="purchaseTrend"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── 채널별 상세 테이블 ── -->
+  <div class="sec">채널별 상세 지표</div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>매체</th>
+          <th>소진비용</th>
+          <th>노출</th>
+          <th>클릭</th>
+          <th>CTR</th>
+          <th>CPM</th>
+          <th>CPC</th>
+          <th>장바구니</th>
+          <th>구매</th>
+          <th>구매CVR</th>
+          <th>구매CPA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="plat-tag"><span class="dot" style="background:var(--meta)"></span>Meta</span></td>
+          <td>22,419,517</td>
+          <td>2,077,301</td>
+          <td>26,025</td>
+          <td class="rh">1.25%</td>
+          <td>10,793</td>
+          <td>861</td>
+          <td>1,548</td>
+          <td class="rh">653</td>
+          <td>2.51%</td>
+          <td class="rm">34,333</td>
+        </tr>
+        <tr>
+          <td><span class="plat-tag"><span class="dot" style="background:var(--gfa)"></span>GFA</span></td>
+          <td>1,636,884</td>
+          <td>161,438</td>
+          <td>2,005</td>
+          <td class="rh">1.24%</td>
+          <td>10,139</td>
+          <td>816</td>
+          <td>90</td>
+          <td class="rh">288</td>
+          <td class="rh">14.36%</td>
+          <td class="rh">5,684</td>
+        </tr>
+        <tr>
+          <td><span class="plat-tag"><span class="dot" style="background:var(--google)"></span>Google</span></td>
+          <td>2,313,985</td>
+          <td>385,692</td>
+          <td>4,435</td>
+          <td class="rm">1.15%</td>
+          <td>6,000</td>
+          <td>522</td>
+          <td>—</td>
+          <td>179</td>
+          <td class="rm">4.04%</td>
+          <td class="rh">12,929</td>
+        </tr>
+        <tr>
+          <td><span class="plat-tag"><span class="dot" style="background:var(--kakao)"></span>Kakao</span></td>
+          <td>465,989</td>
+          <td>310,618</td>
+          <td>1,207</td>
+          <td class="rl">0.39%</td>
+          <td>1,500</td>
+          <td>386</td>
+          <td>17</td>
+          <td>28</td>
+          <td class="rl">2.32%</td>
+          <td class="rm">16,642</td>
+        </tr>
+        <tr class="total-row">
+          <td>합계</td>
+          <td>26,836,375</td>
+          <td>2,935,049</td>
+          <td>33,672</td>
+          <td>1.15%</td>
+          <td>9,143</td>
+          <td>797</td>
+          <td>1,655</td>
+          <td>1,148</td>
+          <td>3.41%</td>
+          <td>23,377</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── AI 감사 결과 ── -->
+  <div class="sec">AI 광고 감사 결과 <span style="font-weight:400;font-size:10px;color:var(--muted);text-transform:none;letter-spacing:0;">(google-meta-rules.md 기준 · 데이터 기반 추정)</span></div>
+
+  <div class="disclaimer">
+    <strong>분석 기준 안내</strong> — 아래 헬스 스코어는 구글 시트의 실제 성과 데이터를 <code>ads/google-meta-rules.md</code> 임계값에 매핑한 결과입니다.
+    EMQ, CAPI 설정, 크리에이티브 다양성 등 광고 계정 내부 데이터가 없는 항목은 <strong>확인 필요</strong>로 표시됩니다.
+    proxy.js를 통해 Claude API 연동 시 실제 계정 데이터 입력으로 정밀 분석 가능합니다.
+  </div>
+
+  <div class="audit-grid">
+
+    <!-- Google Ads 감사 -->
+    <div class="audit-card">
+      <div class="audit-header">
+        <div class="audit-title">
+          <span class="dot" style="width:14px;height:14px;background:var(--google);border-radius:50%;"></span>
+          Google Ads 헬스 스코어
+        </div>
+        <div class="audit-grade grade-c">C</div>
+      </div>
+
+      <div class="total-score">
+        <div class="big" style="color:var(--a4);">62<span style="font-size:20px;color:var(--muted)">/100</span></div>
+        <div class="label">전환 추적·구조 개선 필요 · 소진 비중 8.6%</div>
+      </div>
+
+      <!-- 카테고리별 점수 -->
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">전환 추적 (25%)</span>
+          <span class="score-val" style="color:var(--a4);">55/100</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-yellow" style="width:55%"></div></div>
+      </div>
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">낭비 소비 / 네거티브 (20%)</span>
+          <span class="score-val" style="color:var(--muted);">— 확인 필요</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-yellow" style="width:50%"></div></div>
+      </div>
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">키워드 & 품질점수 (15%)</span>
+          <span class="score-val" style="color:var(--a3);">40/100</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-red" style="width:40%"></div></div>
+      </div>
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">광고 & 에셋 (15%)</span>
+          <span class="score-val" style="color:var(--muted);">— 확인 필요</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-yellow" style="width:55%"></div></div>
+      </div>
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">계정 구조 (15%)</span>
+          <span class="score-val" style="color:var(--a2);">75/100</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-green" style="width:75%"></div></div>
+      </div>
+      <div class="score-section" style="margin-bottom:16px;">
+        <div class="score-label-row">
+          <span class="score-label">설정 & 타겟팅 (10%)</span>
+          <span class="score-val" style="color:var(--a4);">60/100</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-yellow" style="width:60%"></div></div>
+      </div>
+
+      <!-- 이슈 -->
+      <div class="issues-list">
+        <div class="issue-item">
+          <span class="issue-sev sev-critical">Critical</span>
+          <div class="issue-body">
+            <div class="issue-title">장바구니 전환 추적 누락 <span class="quick-win-badge">Quick Win</span></div>
+            <div class="issue-desc">Google 장바구니 담기 CVR 0% 기록 — Meta(5.95%), GFA(4.49%)와 극명한 차이. Enhanced Conversions 또는 이벤트 설정 확인 필요.</div>
+          </div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-sev sev-high">High</span>
+          <div class="issue-body">
+            <div class="issue-title">CTR 1.15% — 검색광고 기준 위험 구간</div>
+            <div class="issue-desc">규칙 기준 Search CTR ≥6.66% 양호, ≥3% 주의, &lt;3% 위험. 현재 1.15%는 위험. 디스플레이/쇼핑 혼합 여부 확인 후 캠페인 유형별 분리 분석 필요.</div>
+          </div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-sev sev-high">High</span>
+          <div class="issue-body">
+            <div class="issue-title">구매CVR 4.04% — 주의 구간</div>
+            <div class="issue-desc">규칙 기준 ≥7.52% 양호. 현재 3~7.52% 주의 구간. Smart Bidding 전환 데이터 충분성(월 15건 이상) 확인 필요.</div>
+          </div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-sev sev-medium">Medium</span>
+          <div class="issue-body">
+            <div class="issue-title">예산 비중 8.6% — 확장 기회 검토</div>
+            <div class="issue-desc">Meta 83.5% 대비 Google 8.6%. CPA 12,929원으로 가장 효율적. 예산 재배분 또는 PMax 캠페인 추가 검토 권장.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta Ads 감사 -->
+    <div class="audit-card">
+      <div class="audit-header">
+        <div class="audit-title">
+          <span class="dot" style="width:14px;height:14px;background:var(--meta);border-radius:50%;"></span>
+          Meta Ads 헬스 스코어
+        </div>
+        <div class="audit-grade grade-b">B</div>
+      </div>
+
+      <div class="total-score">
+        <div class="big" style="color:var(--a2);">76<span style="font-size:20px;color:var(--muted)">/100</span></div>
+        <div class="label">크리에이티브 다양성 · CAPI 확인 필요 · 주력 채널 83.5%</div>
+      </div>
+
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">픽셀 / CAPI 건강도 (30%)</span>
+          <span class="score-val" style="color:var(--muted);">— 계정 확인 필요</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-yellow" style="width:65%"></div></div>
+      </div>
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">크리에이티브 다양성 (30%)</span>
+          <span class="score-val" style="color:var(--muted);">— 계정 확인 필요</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-yellow" style="width:60%"></div></div>
+      </div>
+      <div class="score-section">
+        <div class="score-label-row">
+          <span class="score-label">계정 구조 (20%)</span>
+          <span class="score-val" style="color:var(--a2);">80/100</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-green" style="width:80%"></div></div>
+      </div>
+      <div class="score-section" style="margin-bottom:16px;">
+        <div class="score-label-row">
+          <span class="score-label">잠재고객 & 타겟팅 (20%)</span>
+          <span class="score-val" style="color:var(--a2);">82/100</span>
+        </div>
+        <div class="score-bar"><div class="score-fill fill-green" style="width:82%"></div></div>
+      </div>
+
+      <div class="issues-list">
+        <div class="issue-item">
+          <span class="issue-sev sev-critical">Critical</span>
+          <div class="issue-body">
+            <div class="issue-title">CAPI 설정 확인 필요 <span class="quick-win-badge">Quick Win</span></div>
+            <div class="issue-desc">Conversions API 미설정 시 iOS 14.5+ 이후 데이터 30~40% 손실 발생. 월 소진 2,241만 원 기준 측정 불가 전환 추정 220~260건. 즉시 확인 필요.</div>
+          </div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-sev sev-critical">Critical</span>
+          <div class="issue-body">
+            <div class="issue-title">EMQ 점수 확인 필요 <span class="quick-win-badge">Quick Win</span></div>
+            <div class="issue-desc">Purchase 이벤트 EMQ ≥8.0 필요. 규칙 기준: &lt;6.0 위험, 6~7.9 주의. Events Manager에서 현재 EMQ 확인 후 customer_information 파라미터 추가.</div>
+          </div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-sev sev-high">High</span>
+          <div class="issue-body">
+            <div class="issue-title">크리에이티브 다양성 검토 (Andromeda 엔진)</div>
+            <div class="issue-desc">Meta Andromeda AI(2025.10~) 유사도 60% 초과 광고 노출 억제. CTR 1.25% 유지 중이나 크리에이티브 형식(이미지/영상/캐러셀) 3가지 이상 운영 중인지 확인 필요.</div>
+          </div>
+        </div>
+        <div class="issue-item">
+          <span class="issue-sev sev-medium">Medium</span>
+          <div class="issue-body">
+            <div class="issue-title">구매CPA 34,333원 — 개선 여지</div>
+            <div class="issue-desc">GFA CPA 5,684원 대비 6배 높음. Advantage+ Sales 캠페인 및 광고 세트 예산이 목표 CPA의 5배 이상인지 확인. 학습 제한 광고 세트 비율 30% 미만 유지 필요.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Quick Wins ── -->
+  <div class="sec">즉시 실행 Quick Wins</div>
+  <div class="qw-grid">
+    <div class="qw-card critical">
+      <div class="qw-top"><span class="qw-icon">🔥</span><span class="qw-title">Google 전환 추적 복구</span></div>
+      <div class="qw-desc">장바구니 담기 이벤트 CVR 0% — gtag 또는 GTM에서 AddToCart 이벤트 발화 확인. Enhanced Conversions 활성화.</div>
+      <div class="qw-meta"><span class="qw-time">⏱ 10분</span><span class="qw-impact">📈 전환 데이터 복구</span></div>
+    </div>
+    <div class="qw-card critical">
+      <div class="qw-top"><span class="qw-icon">📡</span><span class="qw-title">Meta CAPI 설정 확인</span></div>
+      <div class="qw-desc">Conversions API 활성화 여부 Events Manager에서 즉시 확인. 미설정 시 전환 30~40% 손실 중.</div>
+      <div class="qw-meta"><span class="qw-time">⏱ 5분 확인</span><span class="qw-impact">📈 최대 260건 전환 복구</span></div>
+    </div>
+    <div class="qw-card critical">
+      <div class="qw-top"><span class="qw-icon">🎯</span><span class="qw-title">Meta EMQ 점수 확인</span></div>
+      <div class="qw-desc">Events Manager → 데이터 소스 → 이벤트 품질 점수 확인. Purchase EMQ &lt;8.0이면 customer_information 파라미터 추가.</div>
+      <div class="qw-meta"><span class="qw-time">⏱ 5분</span><span class="qw-impact">📈 매칭률 향상</span></div>
+    </div>
+    <div class="qw-card high">
+      <div class="qw-top"><span class="qw-icon">💰</span><span class="qw-title">Google 예산 재배분 검토</span></div>
+      <div class="qw-desc">Google CPA 12,929원 (전체 최저). 예산 비중 8.6% → 15% 상향 테스트. Meta 예산 일부 이동 시 총 구매 수 증가 예상.</div>
+      <div class="qw-meta"><span class="qw-time">⏱ 15분</span><span class="qw-impact">📈 구매효율 개선</span></div>
+    </div>
+    <div class="qw-card high">
+      <div class="qw-top"><span class="qw-icon">🎨</span><span class="qw-title">Meta 크리에이티브 다양성 점검</span></div>
+      <div class="qw-desc">Andromeda 엔진 대응. 이미지/동영상/캐러셀 3가지 형식 + 광고 세트당 5개 이상 크리에이티브 확보 여부 점검.</div>
+      <div class="qw-meta"><span class="qw-time">⏱ 30분</span><span class="qw-impact">📈 노출 억제 방지</span></div>
+    </div>
+    <div class="qw-card" style="border-left-color:var(--a4);">
+      <div class="qw-top"><span class="qw-icon">📊</span><span class="qw-title">GFA 확장 가능성 검토</span></div>
+      <div class="qw-desc">GFA CPA 5,684원 — 전체 채널 중 최고 효율. 현재 소진 1,636,884원 (6.1%). 예산 증액 시 추가 구매 확보 가능성 높음.</div>
+      <div class="qw-meta"><span class="qw-time">⏱ 15분</span><span class="qw-impact">📈 CPA 5,684원 유지 확장</span></div>
+    </div>
+  </div>
+
+  <!-- ── 주차별 트렌드 테이블 ── -->
+  <div class="sec">주차별 전체 성과 추이</div>
+  <div class="table-card">
+    <table>
+      <thead>
+        <tr>
+          <th>주차</th>
+          <th>소진비용</th>
+          <th>노출</th>
+          <th>클릭</th>
+          <th>CTR</th>
+          <th>CPM</th>
+          <th>CPC</th>
+          <th>장바구니</th>
+          <th>구매</th>
+          <th>구매CVR</th>
+          <th>구매CPA</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>3월 3주차</td><td>22,752,741</td><td>2,764,643</td><td>29,614</td><td>1.07%</td><td>8,230</td><td>768</td><td>2,661</td><td>1,177</td><td class="rh">3.97%</td><td>19,331</td></tr>
+        <tr><td>3월 4주차</td><td>27,716,499</td><td>4,951,350</td><td>28,151</td><td class="rl">0.57%</td><td>5,598</td><td>985</td><td>2,171</td><td>1,137</td><td class="rh">4.04%</td><td>24,377</td></tr>
+        <tr><td>3월 5주차</td><td>27,200,489</td><td>5,538,736</td><td>37,798</td><td class="rl">0.68%</td><td>4,911</td><td>720</td><td>2,047</td><td>1,036</td><td class="rm">2.74%</td><td>26,255</td></tr>
+        <tr><td>4월 1주차</td><td>25,414,913</td><td>3,233,756</td><td>35,008</td><td>1.08%</td><td>7,859</td><td>726</td><td>1,794</td><td>1,000</td><td class="rm">2.86%</td><td>25,414</td></tr>
+        <tr><td>4월 2주차</td><td>26,244,404</td><td>3,173,832</td><td>34,446</td><td>1.09%</td><td>8,269</td><td>762</td><td>1,642</td><td>1,036</td><td class="rm">3.01%</td><td>25,332</td></tr>
+        <tr style="background:rgba(76,63,212,.04);font-weight:700;"><td>4월 3주차 ◀</td><td>26,836,375</td><td>2,935,049</td><td>33,672</td><td>1.15%</td><td>9,143</td><td>797</td><td>1,655</td><td class="rh">1,148</td><td class="rh">3.41%</td><td class="rh">23,377</td></tr>
+        <tr><td>4월 4주차</td><td>24,825,464</td><td>2,517,295</td><td>35,868</td><td class="rh">1.42%</td><td>9,862</td><td>692</td><td>1,463</td><td>1,070</td><td class="rm">2.98%</td><td class="rh">23,201</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ── 데이터 ──
+const WEEKS  = ['3월3주','3월4주','3월5주','4월1주','4월2주','4월3주','4월4주'];
+const SPEND  = [22752741,27716499,27200489,25414913,26244404,26836375,24825464];
+const PURCHASE=[1177,1137,1036,1000,1036,1148,1070];
+const CVR    = [3.97,4.04,2.74,2.86,3.01,3.41,2.98];
+
+const PLAT_LABELS = ['Meta','GFA','Google','Kakao'];
+const PLAT_COLORS = ['#2a6ab0','#028a3f','#b52a1f','#7a6600'];
+const CTR_DATA    = [1.25, 1.24, 1.15, 0.39];
+const CPA_DATA    = [34333, 5684, 12929, 16642];
+
+const opt = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}}};
+
+// 1. 예산 도넛
+new Chart(document.getElementById('budgetDonut'),{
+  type:'doughnut',
+  data:{
+    labels:PLAT_LABELS,
+    datasets:[{data:[22419517,1636884,2313985,465989],backgroundColor:PLAT_COLORS,borderWidth:2,borderColor:'#fff'}]
+  },
+  options:{...opt,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:d=>`${d.label}: ${(d.raw/26836375*100).toFixed(1)}%`}}}}
+});
+
+// 2. CTR 막대
+new Chart(document.getElementById('ctrBar'),{
+  type:'bar',
+  data:{
+    labels:PLAT_LABELS,
+    datasets:[
+      {label:'CTR',data:CTR_DATA,backgroundColor:PLAT_COLORS,borderRadius:5},
+      {label:'Meta 기준(1.0%)',data:[1,1,1,1],type:'line',borderColor:'#d43a3e',borderDash:[4,3],borderWidth:1.5,pointRadius:0,fill:false}
+    ]
+  },
+  options:{...opt,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>v+'%'},beginAtZero:true,max:2.0}}}
+});
+
+// 3. CPA 막대
+new Chart(document.getElementById('cpaBar'),{
+  type:'bar',
+  data:{
+    labels:PLAT_LABELS,
+    datasets:[{label:'구매CPA',data:CPA_DATA,backgroundColor:PLAT_COLORS,borderRadius:5}]
+  },
+  options:{...opt,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'₩'+v.toLocaleString()},beginAtZero:true}}}
+});
+
+// 4. 소진 트렌드
+new Chart(document.getElementById('spendTrend'),{
+  type:'bar',
+  data:{
+    labels:WEEKS,
+    datasets:[{
+      label:'소진비용',data:SPEND,
+      backgroundColor:WEEKS.map((_,i)=>i===5?'#4c3fd4':'rgba(76,63,212,.3)'),
+      borderRadius:5
+    }]
+  },
+  options:{...opt,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>(v/1000000).toFixed(1)+'M'}}}}
+});
+
+// 5. 구매 + CVR 트렌드
+new Chart(document.getElementById('purchaseTrend'),{
+  type:'bar',
+  data:{
+    labels:WEEKS,
+    datasets:[
+      {label:'구매',data:PURCHASE,backgroundColor:WEEKS.map((_,i)=>i===5?'#0a9c7e':'rgba(10,156,126,.3)'),borderRadius:5,yAxisID:'y'},
+      {label:'구매CVR',data:CVR,type:'line',borderColor:'#e8690a',backgroundColor:'transparent',borderWidth:2,pointRadius:4,pointBackgroundColor:'#e8690a',yAxisID:'y1'}
+    ]
+  },
+  options:{
+    ...opt,
+    plugins:{legend:{display:true,position:'bottom',labels:{font:{size:11},boxWidth:12}}},
+    scales:{
+      y:{position:'left',ticks:{callback:v=>v+'건'},beginAtZero:true},
+      y1:{position:'right',ticks:{callback:v=>v+'%'},beginAtZero:true,max:6,grid:{drawOnChartArea:false}}
+    }
+  }
+});
+</script>
+</body>
+</html>
