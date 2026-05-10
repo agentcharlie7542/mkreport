@@ -730,6 +730,33 @@ textarea:focus{outline:none;border-color:var(--accent);}
     </table>
   </div>
 
+  <!-- 매체 주차별 비교 (Meta · Google 시트 탭 기반) -->
+  <div class="sec-title">매체 주차별 비교 <span class="mbadge" id="mediaWeeklyBadge">0주</span></div>
+  <div class="table-card" style="overflow-x:auto;">
+    <table style="min-width:1100px;">
+      <thead>
+        <tr>
+          <th rowspan="2" style="text-align:left;vertical-align:middle;">주차</th>
+          <th colspan="5" style="background:rgba(91,155,213,0.10);">Meta</th>
+          <th colspan="5" style="background:rgba(234,67,53,0.10);">Google</th>
+        </tr>
+        <tr>
+          <th style="background:rgba(91,155,213,0.06);">광고비</th>
+          <th style="background:rgba(91,155,213,0.06);">노출</th>
+          <th style="background:rgba(91,155,213,0.06);">CTR</th>
+          <th style="background:rgba(91,155,213,0.06);">구매</th>
+          <th style="background:rgba(91,155,213,0.06);">매출 / ROAS</th>
+          <th style="background:rgba(234,67,53,0.06);">광고비</th>
+          <th style="background:rgba(234,67,53,0.06);">노출</th>
+          <th style="background:rgba(234,67,53,0.06);">CTR</th>
+          <th style="background:rgba(234,67,53,0.06);">구매</th>
+          <th style="background:rgba(234,67,53,0.06);">매출 / ROAS</th>
+        </tr>
+      </thead>
+      <tbody id="mediaWeeklyTbody"></tbody>
+    </table>
+  </div>
+
 
 </div><!-- /page-dashboard -->
 
@@ -984,6 +1011,8 @@ let trendChart = null, mediaRoasChart = null, mediaShareChart = null;
 let rawCreatives = [];       // rows from 'Raw data' tab
 let insightLog   = [];       // rows from 'insight' tab (feedback log)
 let historyLog   = [];       // rows from 'history' tab (issue log)
+let metaWeekly   = [];       // rows from 'Meta' tab — weekly aggregates
+let googleWeekly = [];       // rows from 'Google' tab — weekly aggregates
 let dataQualityNotes = [];   // normalization warnings surfaced to user
 let actionCatChart = null, reasonCatChart = null;
 
@@ -1084,6 +1113,7 @@ function applyFilters(){
   updateTrendChart(data);
   updateDailyTable(data);
   updateMediaCharts();
+  renderMediaWeeklyComparison();
   updateManageTable();
   document.getElementById('rowCountBadge').textContent=allData.length+'건';
   document.getElementById('lastUpdate').textContent='업데이트: '+new Date().toLocaleTimeString('ko-KR');
@@ -2496,6 +2526,8 @@ const DEEP_RANGES = {
   raw:     "'Raw data'!A:N",
   insight: "'insight'!A:J",
   history: "'history'!A:E",
+  meta:    "'Meta'!A:M",
+  google:  "'Google'!A:M",
 };
 
 // 밀잇 DA_퍼포먼스_Weekly — 대시보드 전용 시트. 로그인 후 URL 입력이 비어 있으면 자동으로 채워짐.
@@ -2514,12 +2546,12 @@ async function fetchSheet(){
   const sheetId  = extractSheetId(urlInput);
   if(!sheetId){ setStatus('sheetStatus','❌ 올바른 스프레드시트 URL 또는 ID를 입력하세요.','#ff6b6b'); return; }
 
-  setStatus('sheetStatus','⏳ 전체 데이터 불러오는 중 (Summary · Raw data · insight · history)…','#8a8fa8');
+  setStatus('sheetStatus','⏳ 전체 데이터 불러오는 중 (Summary · Raw data · insight · history · Meta · Google)…','#8a8fa8');
   const lu = document.getElementById('lastUpdate');
   if(lu) lu.textContent = '⏳ 시트 로딩 중…';
   try{
     const token = await ensureToken();
-    const ranges = [summaryRange, DEEP_RANGES.raw, DEEP_RANGES.insight, DEEP_RANGES.history];
+    const ranges = [summaryRange, DEEP_RANGES.raw, DEEP_RANGES.insight, DEEP_RANGES.history, DEEP_RANGES.meta, DEEP_RANGES.google];
     const qs = ranges.map(r => 'ranges=' + encodeURIComponent(r)).join('&');
     const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${qs}`;
     const res = await fetch(apiUrl, { headers: { Authorization: 'Bearer '+token } });
@@ -2532,7 +2564,7 @@ async function fetchSheet(){
       throw new Error('권한 없음. 이 시트가 로그인 계정에 공유돼 있는지, Sheets API가 활성화됐는지 확인하세요.');
     }
     if(res.status === 404){
-      throw new Error('시트/범위를 찾을 수 없습니다. 탭 이름은 Summary · Raw data · insight · history 로 맞춰주세요.');
+      throw new Error('시트/범위를 찾을 수 없습니다. 탭 이름은 Summary · Raw data · insight · history · Meta · Google 로 맞춰주세요.');
     }
     if(!res.ok){
       const errJson = await res.json().catch(()=>({}));
@@ -2545,11 +2577,16 @@ async function fetchSheet(){
     const insightRows = (vr[2] && vr[2].values) || [];
     const historyRows = (vr[3] && vr[3].values) || [];
 
+    const metaRows    = (vr[4] && vr[4].values) || [];
+    const googleRows  = (vr[5] && vr[5].values) || [];
+
     dataQualityNotes = [];
     const { added, skipped } = mergeSheetRows(summaryRows);
     rawCreatives = parseRawCreatives(rawRows);
     insightLog   = parseInsightLog(insightRows);
     historyLog   = parseHistoryLog(historyRows);
+    metaWeekly   = parseMediaWeekly(metaRows, 'Meta');
+    googleWeekly = parseMediaWeekly(googleRows, 'Google');
 
     // 시트의 마지막 날짜까지 자동으로 보이게 — 사용자가 박아둔 옛 toDate가 신규 데이터를 잘라버리지 않도록
     const firstDate = allData.length ? allData[0].date : '';
@@ -2564,6 +2601,8 @@ async function fetchSheet(){
     const parts = [
       `✅ 일자 ${added}건`,
       `소재행 ${rawCreatives.length}`,
+      `Meta 주차 ${metaWeekly.length}`,
+      `Google 주차 ${googleWeekly.length}`,
       `인사이트 ${insightLog.length}`,
       `히스토리 ${historyLog.length}`,
     ];
@@ -2609,6 +2648,88 @@ async function refreshSheetFromHeader(){
       btn.textContent = btn.dataset.origText || '🔄 시트 새로고침';
     }
   }
+}
+
+// 'Meta' / 'Google' 탭 — 주차별 집계 (시트 내 캠페인별 섹션은 자동 제외)
+// 컬럼: A=매체1 | B=주차 | C=소진금액 | D=노출 | E=링크클릭 | F=CTR | G=CPM | H=CPC
+//       I=장바구니 | J=구매 | K=구매전환값(매출) | L=CVR | M=ROAS
+function parseMediaWeekly(rows, expectedMedia){
+  if(!rows || !rows.length) return [];
+  const weekRe = /(\d+)월\s*(\d+)주차/;
+  const out = [];
+  let inSection = false;
+  for(let i=0;i<rows.length;i++){
+    const cols = rows[i] || [];
+    const a = String(cols[0]||'').trim();
+    const b = String(cols[1]||'').trim();
+    // 섹션 시작 — 헤더 행 '매체1 | 주차'
+    if(a === '매체1' && b === '주차'){ inSection = true; continue; }
+    if(!inSection) continue;
+    // 두 번째 섹션 '캠페인 별' 헤더를 만나면 종료 (campaign-level 데이터는 사용 안 함)
+    if(a === '캠페인명' || a.startsWith('캠페인')) break;
+    // 총계 / 소계 행 스킵
+    if(a.includes('총계') || b.includes('총계')) continue;
+    // col B에 주차 라벨이 있어야 데이터 행
+    const m = weekRe.exec(b);
+    if(!m) continue;
+    out.push({
+      week: `${m[1]}월 ${m[2]}주차`,
+      sortKey: parseInt(m[1])*10 + parseInt(m[2]),
+      media: expectedMedia,
+      spend:    pn(cols[2]),
+      imp:      pn(cols[3]),
+      clicks:   pn(cols[4]),
+      ctr:      pn(cols[5]),
+      cpm:      pn(cols[6]),
+      cpc:      pn(cols[7]),
+      cart:     pn(cols[8]),
+      purchase: pn(cols[9]),
+      revenue:  pn(cols[10]),
+      cvr:      pn(cols[11]),
+      roas:     pn(cols[12]),
+    });
+  }
+  return out;
+}
+
+function renderMediaWeeklyComparison(){
+  const tbody = document.getElementById('mediaWeeklyTbody');
+  const badge = document.getElementById('mediaWeeklyBadge');
+  if(!tbody) return;
+
+  const byWeek = {};
+  metaWeekly.forEach(r => {
+    byWeek[r.week] = byWeek[r.week] || { week:r.week, sortKey:r.sortKey };
+    byWeek[r.week].meta = r;
+  });
+  googleWeekly.forEach(r => {
+    byWeek[r.week] = byWeek[r.week] || { week:r.week, sortKey:r.sortKey };
+    byWeek[r.week].google = r;
+  });
+  const weeks = Object.values(byWeek).sort((a,b) => a.sortKey - b.sortKey);
+
+  if(badge) badge.textContent = `${weeks.length}주`;
+
+  if(!weeks.length){
+    tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px;">Meta · Google 시트 탭이 비었거나 형식이 맞지 않습니다 (헤더 행: <code>매체1 | 주차 | 소진 금액 ...</code> 필요).</td></tr>';
+    return;
+  }
+
+  const fmtN = v => (v == null || isNaN(v)) ? '—' : Math.round(v).toLocaleString();
+  const cellsFor = (r) => {
+    if(!r) return '<td colspan="5" style="text-align:center;color:var(--muted);">—</td>';
+    return [
+      `<td>${fmtN(r.spend)}</td>`,
+      `<td>${fmtN(r.imp)}</td>`,
+      `<td>${(r.ctr||0).toFixed(2)}%</td>`,
+      `<td>${fmtN(r.purchase)}</td>`,
+      `<td>${fmtN(r.revenue)}<br><span style="color:var(--muted);font-size:11px;">ROAS ${(r.roas||0).toFixed(0)}%</span></td>`,
+    ].join('');
+  };
+
+  tbody.innerHTML = weeks.map(w =>
+    `<tr><td style="text-align:left;font-weight:500;">${w.week}</td>${cellsFor(w.meta)}${cellsFor(w.google)}</tr>`
+  ).join('');
 }
 
 function mergeSheetRows(rows){
