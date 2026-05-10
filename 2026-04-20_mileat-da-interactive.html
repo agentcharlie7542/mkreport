@@ -361,6 +361,7 @@ textarea:focus{outline:none;border-color:var(--accent);}
     <button class="nav-tab" id="nav-history" onclick="switchPage('history')">히스토리</button>
   </nav>
   <div class="topbar-right">
+    <button class="btn btn-primary" id="btnRefreshSheet" onclick="refreshSheetFromHeader()" title="연동된 구글 시트 데이터를 다시 불러옵니다">🔄 시트 새로고침</button>
     <button class="btn btn-icon" id="btnDataInput" onclick="toggleDataPanel()" title="데이터 입력">📥 데이터 입력</button>
     <button class="btn" id="btnExportCSV" onclick="exportCSV()">⬇ CSV 내보내기</button>
     <span id="lastUpdate" style="font-size:11px;color:var(--muted)">로드 중…</span>
@@ -2565,6 +2566,33 @@ async function fetchSheet(){
   }catch(e){
     setStatus('sheetStatus','❌ '+e.message, '#ff6b6b');
     if(lu) lu.textContent = '⚠️ 시트 연동 실패 (데이터 입력 패널에서 확인)';
+  }
+}
+
+// 헤더의 🔄 버튼 — 데이터 입력 패널을 열지 않고도 시트를 다시 불러옴
+async function refreshSheetFromHeader(){
+  const btn = document.getElementById('btnRefreshSheet');
+  if(!accessToken){
+    setStatus('sheetStatus','❌ 먼저 구글 로그인이 필요합니다.','#ff6b6b');
+    const lu = document.getElementById('lastUpdate');
+    if(lu) lu.textContent = '⚠️ 로그인 필요';
+    return;
+  }
+  // sheetUrl 입력이 비어 있으면 기본값(밀잇 시트)으로 채움
+  const urlInput = document.getElementById('sheetUrl');
+  if(urlInput && !urlInput.value.trim()) urlInput.value = DEFAULT_SHEET_URL;
+  if(btn){
+    btn.disabled = true;
+    btn.dataset.origText = btn.textContent;
+    btn.textContent = '⏳ 불러오는 중…';
+  }
+  try{
+    await fetchSheet();
+  } finally {
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = btn.dataset.origText || '🔄 시트 새로고침';
+    }
   }
 }
 
