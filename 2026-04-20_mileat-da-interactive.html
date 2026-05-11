@@ -2897,19 +2897,27 @@ function mergeSheetRows(rows){
     const cols = rows[i];
     if(!cols || cols.length<2){ skipped++; continue; }
     // normalizeDateKR이 모든 형식 흡수: ISO, 한국 로케일('2026. 03. 15.'), 시리얼 넘버, 'n월 d일' 등
-    const date = normalizeDateKR(cols[0], 2026);
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)){
+    // 시트 구조 변경(예: 좌측 빈 컬럼 추가)에 대응 — 처음 3개 열에서 날짜 자동 탐지
+    let dateCol = -1;
+    let date = '';
+    for(let c=0; c<Math.min(3, cols.length); c++){
+      const cand = normalizeDateKR(cols[c], 2026);
+      if(/^\d{4}-\d{2}-\d{2}$/.test(cand)){ date = cand; dateCol = c; break; }
+    }
+    if(dateCol < 0){
       skipped++;
-      if(skippedSamples.length < 5) skippedSamples.push({i, raw:cols[0], cols:cols.slice(0,3)});
+      if(skippedSamples.length < 5) skippedSamples.push({i, raw:cols[0], cols:cols.slice(0,4)});
       continue;
     }
+    const o = dateCol; // 컬럼 오프셋 (0=A에 날짜, 1=B에 날짜)
     const row = {
-      date, spend:pn(cols[1]), imp:pn(cols[2]), clicks:pn(cols[3]),
-      ctr:pn(cols[4]), cpm:pn(cols[5]), cpc:pn(cols[6]),
-      cart:pn(cols[7]), purchase:pn(cols[8]),
-      cartCvr:pn(cols[9]), purchaseCvr:pn(cols[10]),
-      cartCpa:pn(cols[11]), purchaseCpa:pn(cols[12]),
-      revenue:pn(cols[13]), roas:pn(cols[14])
+      date,
+      spend:pn(cols[1+o]), imp:pn(cols[2+o]), clicks:pn(cols[3+o]),
+      ctr:pn(cols[4+o]), cpm:pn(cols[5+o]), cpc:pn(cols[6+o]),
+      cart:pn(cols[7+o]), purchase:pn(cols[8+o]),
+      cartCvr:pn(cols[9+o]), purchaseCvr:pn(cols[10+o]),
+      cartCpa:pn(cols[11+o]), purchaseCpa:pn(cols[12+o]),
+      revenue:pn(cols[13+o]), roas:pn(cols[14+o])
     };
     if(row.roas===0 && row.spend>0 && row.revenue>0) row.roas=Math.round(row.revenue/row.spend*100);
     const existing = allData.findIndex(d=>d.date===date);
@@ -2918,7 +2926,7 @@ function mergeSheetRows(rows){
   }
   allData.sort((a,b)=>a.date.localeCompare(b.date));
   if(skipped > 0 && skippedSamples.length){
-    console.warn('[Summary] 날짜 인식 실패 — skipped:', skipped, 'samples (i/raw/cols[0..2]):', skippedSamples);
+    console.warn('[Summary] 날짜 인식 실패 — skipped:', skipped, 'samples (i/raw/cols[0..3]):', skippedSamples);
     if(added === 0){
       dataQualityNotes.push(`Summary 탭 ${skipped}행 전부 날짜 인식 실패 — 콘솔(F12)에서 'Summary 날짜 인식 실패' 경고를 확인하세요. raw 예: <code>${String(skippedSamples[0].raw||'').slice(0,40)}</code>`);
     }
